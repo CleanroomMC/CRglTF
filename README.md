@@ -22,15 +22,6 @@ The example codes for rendering Block, Item, and Entity
 - [x] Morph targets[^6]
 - [x] Zero-scale node culling[^7]
 
-### Notes
-- [^1]: Only available for ShaderMod from OptiFine.
-- [^2]: Only `COLOR_0` can be used, it is treated as vertex color of `baseColor`.
-- [^3]: Please see [Supported glTF Material Property](docs/supported_gltf_material_property.md) for more info.
-- [^4]: Support every interpolation method.
-- [^5]: Support more than 4 bone per-vertex.
-- [^6]: Support every valid attribute, including `COLOR_n` and `TEXCOORD_n`.
-- [^7]: Support both non-skinned mesh and skinned mesh.
-
 ## Optimization
 This mod support various optimization through 3 profiles of OpenGL availability. By default, it will automatically select for you.
 
@@ -43,3 +34,11 @@ This mod support various optimization through 3 profiles of OpenGL availability.
 ## Credit
 - JglTF by javagl : https://github.com/javagl/JglTF
 - Mikk Tangent Generator by jMonkeyEngine : https://github.com/jMonkeyEngine/jmonkeyengine
+
+[^1]: Only available for ShaderMod from OptiFine.
+[^2]: Only `COLOR_0` can be used, it is treated as vertex color of `baseColor`.
+[^3]: Please see [Supported glTF Material Property](https://github.com/TimLee9024/CRglTF/blob/master/docs/supported_gltf_material_property.md) for more info.
+[^4]: Support every interpolation method.
+[^5]: Support more than 4 bone per-vertex.
+[^6]: Support every valid attribute, including `COLOR_n` and `TEXCOORD_n`.
+[^7]: Support both non-skinned mesh and skinned mesh.
