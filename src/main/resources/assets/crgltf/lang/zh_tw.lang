@@ -1,0 +1,8 @@
+config.crgltf.gltf_config_title=glTF設定
+config.crgltf.gltf_material_converter_pack=glTF材質轉換包
+config.crgltf.gltf_material_converter_pack.tooltip=裝載glTF材質轉換包將glTF V2的PBR材質轉換成光影包支援的格式。\n(例如：SEUS PBR, LabPBR)
+config.crgltf.gltf_material_converter_pack.disabled=*已停用*
+config.crgltf.open_gltf_material_converter_pack_dir=開啟glTF材質轉換包資料夾
+config.crgltf.open_gltf_material_converter_pack_dir.tooltip=請將glTF材質轉換包置於此處
+config.crgltf.opengl_availability=OpenGL功能可用性
+config.crgltf.opengl_availability.tooltip=選擇此模組可使用的OpenGL功能。\nAuto: 透過檢查系統所支援的OpenGL版本來決定\n\nFull: 可使用所有OpenGL功能，系統需至少支援OpenGL 4.3\n\nGL21_FBO: 比照遊戲最低的OpenGL版本需求，僅支援到OpenGL 2.1+FBO\n\n除非遇到相容性問題，將選項調成GL21_FBO會降低效能。

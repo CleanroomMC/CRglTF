@@ -1,0 +1,8 @@
+config.crgltf.gltf_config_title=glTF Config
+config.crgltf.gltf_material_converter_pack=glTF Material Converter Pack
+config.crgltf.gltf_material_converter_pack.tooltip=Use a glTF material converter pack to convert the glTF material to a format supported by the Shader pack.\n(For example, SEUS PBR, LabPBR).
+config.crgltf.gltf_material_converter_pack.disabled=*Disabled*
+config.crgltf.open_gltf_material_converter_pack_dir=Open glTF Material Converter Pack Folder
+config.crgltf.open_gltf_material_converter_pack_dir.tooltip=Place glTF Material Converter Pack files here
+config.crgltf.opengl_availability=OpenGL Availability
+config.crgltf.opengl_availability.tooltip=Select the OpenGL features available for this mod.\nAuto: Determine by checking the OpenGL version supported by the system.\n\nFull: All OpenGL features can be used; your system must support at least OpenGL 4.3.\n\nGL21_FBO: Follow the minimum OpenGL version requirements; only supports up to OpenGL 2.1+FBO.\n\nUnless there are compatibility issues, setting the option to GL21_FBO will reduce performance.
