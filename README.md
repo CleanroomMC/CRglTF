@@ -6,7 +6,7 @@ Full-featured glTF model renderer for [Cleanroom](https://github.com/CleanroomMC
 > The documentation for how to use with this mod is TBD, please check out the example usage for now.
 
 The example codes for rendering Block, Item, and Entity
-- https://github.com/TimLee9024/CRglTF-Example
+- https://github.com/CleanroomMC/CRglTF-Example
 ## Features
 - [x] GLTF format
 - [x] GLB format
@@ -16,7 +16,7 @@ The example codes for rendering Block, Item, and Entity
 - [x] Vertex colors[^2]
 - [x] Materials[^3]
 - [x] Textures
-- [x] Mutiple texture coordinates[^3]
+- [x] Multiple texture coordinates[^3]
 - [x] Animations[^4]
 - [x] Rig[^5]
 - [x] Morph targets[^6]
@@ -37,7 +37,7 @@ This mod support various optimization through 3 profiles of OpenGL availability.
 
 [^1]: Only available for ShaderMod from OptiFine.
 [^2]: Only `COLOR_0` can be used, it is treated as vertex color of `baseColor`.
-[^3]: Please see [Supported glTF Material Property](https://github.com/TimLee9024/CRglTF/blob/master/docs/supported_gltf_material_property.md) for more info.
+[^3]: Please see [Supported glTF Material Property](https://github.com/CleanroomMC/CRglTF/blob/master/docs/supported_gltf_material_property.md) for more info.
 [^4]: Support every interpolation method.
 [^5]: Support more than 4 bone per-vertex.
 [^6]: Support every valid attribute, including `COLOR_n` and `TEXCOORD_n`.
