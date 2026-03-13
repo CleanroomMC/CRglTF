@@ -35,7 +35,7 @@
 
 ![Mod Config](imgs/mod_config.png)
 
-2. Click Open glTF Material Converter Pack Folder to enter into `gltf_material_converter_pack` folder, go to https://github.com/TimLee9024/glTF-Material-Converter-Pack and download the glTF material converter pack corresponding to the `Material Format` set in the Shader Options, and place the converter pack in the `gltf_material_converter_pack` folder.
+2. Click Open glTF Material Converter Pack Folder to enter into `gltf_material_converter_pack` folder, go to https://github.com/CleanroomMC/glTF-Material-Converter-Pack and download the glTF material converter pack corresponding to the `Material Format` set in the Shader Options, and place the converter pack in the `gltf_material_converter_pack` folder.
 
 ![Open glTF Material Converter Pack Folder](imgs/open_gltf_material_converter_pack_folder.png)
 
