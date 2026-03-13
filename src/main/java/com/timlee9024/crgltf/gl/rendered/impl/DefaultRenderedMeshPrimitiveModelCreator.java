@@ -705,27 +705,22 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 	}
 
 	protected void setupRequiredAttributeFromSkinning() {
-		int glPositionDestBuffer = GL15.glGenBuffers();
-		renderedMeshPrimitiveModel.skinning.glPositionDestBuffer = glPositionDestBuffer;
-		glBuffers.add(glPositionDestBuffer);
-		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, glPositionDestBuffer);
-		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, (long) renderedMeshPrimitiveModel.count * Float.BYTES * ElementType.VEC4.getNumComponents(), GL15.GL_STATIC_DRAW);
+		renderedMeshPrimitiveModel.skinning.glAttributesBuffer = GL15.glGenBuffers();
+		glBuffers.add(renderedMeshPrimitiveModel.skinning.glAttributesBuffer);
+		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.skinning.glAttributesBuffer);
+		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, (long) renderedMeshPrimitiveModel.count * Float.BYTES * ElementType.VEC4.getNumComponents() * 3, GL15.GL_STATIC_DRAW);
+
 		GL11.glVertexPointer(
 				3,
 				GL11.GL_FLOAT,
-				Float.BYTES * ElementType.VEC4.getNumComponents(),
+				Float.BYTES * ElementType.VEC4.getNumComponents() * 3,
 				0);
 		GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
 
-		int glNormalDestBuffer = GL15.glGenBuffers();
-		renderedMeshPrimitiveModel.skinning.glNormalDestBuffer = glNormalDestBuffer;
-		glBuffers.add(glNormalDestBuffer);
-		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, glNormalDestBuffer);
-		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, (long) renderedMeshPrimitiveModel.count * Float.BYTES * ElementType.VEC4.getNumComponents(), GL15.GL_STATIC_DRAW);
 		GL11.glNormalPointer(
 				GL11.GL_FLOAT,
-				Float.BYTES * ElementType.VEC4.getNumComponents(),
-				0);
+				Float.BYTES * ElementType.VEC4.getNumComponents() * 3,
+				(long) Float.BYTES * ElementType.VEC4.getNumComponents());
 		GL11.glEnableClientState(GL11.GL_NORMAL_ARRAY);
 	}
 

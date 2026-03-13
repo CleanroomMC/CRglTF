@@ -29,15 +29,14 @@ public class GltfApplySkinMatrixPassConstants {
 						+ "layout(location = " + getNormalIn() + ") in vec3 normal;"
 						+ "layout(location = " + getTangentIn() + ") in vec4 tangent;"
 						+ "layout(location = " + getSkinMatrixIn() + ") in mat4 skinMatrix;"
-						+ "layout(std430, binding = " + getPositionOut() + ") restrict writeonly buffer positionBuffer {vec4 positionOut[];};"
-						+ "layout(std430, binding = " + getNormalOut() + ") restrict writeonly buffer normalBuffer {vec4 normalOut[];};"
-						+ "layout(std430, binding = " + getTangentOut() + ") restrict writeonly buffer tangentBuffer {vec4 tangentOut[];};"
+						+ "layout(std430, binding = " + getAttributes() + ") restrict writeonly buffer attributesBuffer {vec4 attributes[];};"
 						+ "void main() {"
-						+ "positionOut[gl_VertexID] = skinMatrix * vec4(position, 1.0);"
+						+ "int offset = gl_VertexID * 3;"
+						+ "attributes[offset] = skinMatrix * vec4(position, 1.0);"
 						+ "mat3 upperLeft = mat3(skinMatrix);"
-						+ "normalOut[gl_VertexID].xyz = upperLeft * normal;"
-						+ "tangentOut[gl_VertexID].xyz = upperLeft * tangent.xyz;"
-						+ "tangentOut[gl_VertexID].w = tangent.w;"
+						+ "attributes[offset += 1].xyz = upperLeft * normal;"
+						+ "attributes[offset += 1].xyz = upperLeft * tangent.xyz;"
+						+ "attributes[offset].w = tangent.w;"
 						+ "}");
 		GL20.glCompileShader(glShader);
 
@@ -69,16 +68,8 @@ public class GltfApplySkinMatrixPassConstants {
 		return 3;
 	}
 
-	public int getPositionOut() {
+	public int getAttributes() {
 		return 0;
-	}
-
-	public int getNormalOut() {
-		return 1;
-	}
-
-	public int getTangentOut() {
-		return 2;
 	}
 
 }

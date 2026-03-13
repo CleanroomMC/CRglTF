@@ -203,35 +203,26 @@ public class DefaultDaxShaderRenderedMeshPrimitiveModelCreator extends DefaultRe
 
 		GL30.glBindVertexArray(daxShaderRenderedMeshPrimitiveModel.glDaxShaderRenderVAO);
 
-		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.skinning.glPositionDestBuffer);
-		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, (long) renderedMeshPrimitiveModel.count * Float.BYTES * ElementType.VEC4.getNumComponents(), GL15.GL_STATIC_DRAW);
 		GL11.glVertexPointer(
 				3,
 				GL11.GL_FLOAT,
-				Float.BYTES * ElementType.VEC4.getNumComponents(),
+				Float.BYTES * ElementType.VEC4.getNumComponents() * 3,
 				0);
 		GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
 
-		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.skinning.glNormalDestBuffer);
-		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, (long) renderedMeshPrimitiveModel.count * Float.BYTES * ElementType.VEC4.getNumComponents(), GL15.GL_STATIC_DRAW);
 		GL11.glNormalPointer(
 				GL11.GL_FLOAT,
-				Float.BYTES * ElementType.VEC4.getNumComponents(),
-				0);
+				Float.BYTES * ElementType.VEC4.getNumComponents() * 3,
+				(long) Float.BYTES * ElementType.VEC4.getNumComponents());
 		GL11.glEnableClientState(GL11.GL_NORMAL_ARRAY);
 
-		int glTangentDestBuffer = GL15.glGenBuffers();
-		renderedMeshPrimitiveModel.skinning.glTangentDestBuffer = glTangentDestBuffer;
-		glBuffers.add(glTangentDestBuffer);
-		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, glTangentDestBuffer);
-		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, (long) renderedMeshPrimitiveModel.count * Float.BYTES * ElementType.VEC4.getNumComponents(), GL15.GL_STATIC_DRAW);
 		GL20.glVertexAttribPointer(
 				DaxShaderRenderConstants.getInstance().getTangentAttributeIndex(),
 				4,
 				GL11.GL_FLOAT,
 				false,
-				Float.BYTES * ElementType.VEC4.getNumComponents(),
-				0);
+				Float.BYTES * ElementType.VEC4.getNumComponents() * 3,
+				(long) Float.BYTES * ElementType.VEC4.getNumComponents() * 2);
 		GL20.glEnableVertexAttribArray(DaxShaderRenderConstants.getInstance().getTangentAttributeIndex());
 
 		GL30.glBindVertexArray(renderedMeshPrimitiveModel.glRenderVAO);

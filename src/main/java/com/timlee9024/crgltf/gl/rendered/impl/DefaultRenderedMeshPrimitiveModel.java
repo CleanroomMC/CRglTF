@@ -100,9 +100,7 @@ public class DefaultRenderedMeshPrimitiveModel {
 		public int[] glSkinMatrixTargetVAOs;
 
 		public int glVertexSrcVAO;
-		public int glPositionDestBuffer;
-		public int glNormalDestBuffer;
-		public int glTangentDestBuffer;
+		public int glAttributesBuffer;
 
 		public void calculateSkinMatrix() {
 			GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, glSkinMatrixBuffer);
@@ -116,9 +114,7 @@ public class DefaultRenderedMeshPrimitiveModel {
 		}
 
 		public void applySkinMatrix() {
-			GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, GltfApplySkinMatrixPassConstants.getInstance().getPositionOut(), glPositionDestBuffer);
-			GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, GltfApplySkinMatrixPassConstants.getInstance().getNormalOut(), glNormalDestBuffer);
-			GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, GltfApplySkinMatrixPassConstants.getInstance().getTangentOut(), glTangentDestBuffer);
+			GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, GltfApplySkinMatrixPassConstants.getInstance().getAttributes(), glAttributesBuffer);
 			GL30.glBindVertexArray(glVertexSrcVAO);
 			GL11.glDrawArrays(GL11.GL_POINTS, 0, count);
 		}
