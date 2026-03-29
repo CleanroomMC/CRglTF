@@ -2,11 +2,14 @@ package com.timlee9024.crgltf.gl.rendered.impl;
 
 import com.timlee9024.crgltf.gl.constants.GltfCalcJointMatrixPassConstants;
 import com.timlee9024.crgltf.gl.constants.GltfCalcSkinMatrixPassConstants;
+import com.timlee9024.crgltf.gl.constants.GltfMorphingPassConstants;
 import com.timlee9024.crgltf.gl.rendered.NodeAccessor;
 import de.javagl.jgltf.model.ElementType;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL15;
+import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL30;
+import org.lwjgl.opengl.GL42;
 import org.lwjgl.opengl.GL43;
 import org.lwjgl.system.MemoryStack;
 
@@ -89,6 +92,7 @@ public class DefaultRenderedNodeModel extends CommonNodeAccessor {
 				}
 			}
 
+			GL20.glUniform1f(GltfMorphingPassConstants.getInstance().getWeight(), 1);
 			for (DefaultRenderedMeshModel renderedMeshModel : renderedMeshModels) {
 				for (DefaultRenderedMeshPrimitiveModel renderedMeshPrimitiveModel : renderedMeshModel.renderedMeshPrimitiveModels) {
 					renderedMeshPrimitiveModel.morphing.restoreAttributesForMorphing();
@@ -98,9 +102,11 @@ public class DefaultRenderedNodeModel extends CommonNodeAccessor {
 				for (int i = 0; i < weights.length; i++) {
 					float weight = weights[i];
 					if (weight != 0) {
+						GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
+						GL20.glUniform1f(GltfMorphingPassConstants.getInstance().getWeight(), weight);
 						for (DefaultRenderedMeshModel renderedMeshModel : renderedMeshModels) {
 							for (DefaultRenderedMeshPrimitiveModel renderedMeshPrimitiveModel : renderedMeshModel.renderedMeshPrimitiveModels) {
-								renderedMeshPrimitiveModel.morphing.applyMorphWeight(i, weight);
+								renderedMeshPrimitiveModel.morphing.applyMorphTarget(i);
 							}
 						}
 					}

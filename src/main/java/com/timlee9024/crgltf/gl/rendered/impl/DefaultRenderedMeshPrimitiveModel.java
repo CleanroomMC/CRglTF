@@ -5,7 +5,6 @@ import com.timlee9024.crgltf.gl.constants.GltfCalcSkinMatrixPassConstants;
 import com.timlee9024.crgltf.gl.constants.GltfMorphingPassConstants;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL15;
-import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL30;
 import org.lwjgl.opengl.GL42;
 import org.lwjgl.opengl.GL43;
@@ -41,7 +40,7 @@ public class DefaultRenderedMeshPrimitiveModel {
 			}
 
 			@Override
-			public void applyMorphWeight(int target, float weight) {
+			public void applyMorphTarget(int target) {
 			}
 
 		};
@@ -59,7 +58,7 @@ public class DefaultRenderedMeshPrimitiveModel {
 				GL11.glDrawArrays(GL11.GL_POINTS, 0, count);
 			}
 
-			public void applyMorphWeight(int target) {
+			public void applyMorphTarget(int target) {
 				GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, GltfMorphingPassConstants.getInstance().getMorphBuffer(), glMorphBuffer);
 				GL30.glBindVertexArray(glMorphTargetVAOs[target]);
 				GL11.glDrawArrays(GL11.GL_POINTS, 0, count);
@@ -70,14 +69,11 @@ public class DefaultRenderedMeshPrimitiveModel {
 		public AttributeBundle[] attributeBundles;
 
 		public void restoreAttributesForMorphing() {
-			GL20.glUniform1f(GltfMorphingPassConstants.getInstance().getWeight(), 1);
 			for (AttributeBundle bundle : attributeBundles) bundle.restoreAttributesForMorphing();
 		}
 
-		public void applyMorphWeight(int target, float weight) {
-			GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
-			GL20.glUniform1f(GltfMorphingPassConstants.getInstance().getWeight(), weight);
-			for (AttributeBundle bundle : attributeBundles) bundle.applyMorphWeight(target);
+		public void applyMorphTarget(int target) {
+			for (AttributeBundle bundle : attributeBundles) bundle.applyMorphTarget(target);
 		}
 
 	}
