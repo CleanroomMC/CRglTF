@@ -1,5 +1,6 @@
 package com.timlee9024.crgltf.gl.rendered.daxshader.impl;
 
+import com.timlee9024.crgltf.gl.rendered.impl.DefaultNodeSkin;
 import com.timlee9024.crgltf.gl.rendered.impl.DefaultRenderedNodeModel;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.system.MemoryStack;
@@ -9,7 +10,7 @@ public class DefaultDaxShaderRenderedNodeModel extends DefaultRenderedNodeModel 
 	public DefaultDaxShaderRenderedMeshModel[] daxShaderRenderedMeshModels;
 
 	public void renderMeshModelsForDaxShader() {
-		if (skinning == DefaultRenderedNodeModel.Skinning.DUMMY) {
+		if (nodeSkin == DefaultNodeSkin.DUMMY) {
 			if (isGlobalTransformZeroMatrix()) return;
 			//To match glTF spec requirement for NODE_SKINNED_MESH_LOCAL_TRANSFORMS.
 			GL11.glPushMatrix();
@@ -21,8 +22,8 @@ public class DefaultDaxShaderRenderedNodeModel extends DefaultRenderedNodeModel 
 			}
 			GL11.glPopMatrix();
 		} else {
-			skinning.isAllJointZeroMatrixChecked = false;
-			if (skinning.isAllJointZeroMatrix) return;
+			nodeSkin.isAllJointZeroMatrixChecked = false;
+			if (nodeSkin.isAllJointZeroMatrix) return;
 			for (DefaultDaxShaderRenderedMeshModel renderedMeshModel : daxShaderRenderedMeshModels) {
 				renderedMeshModel.renderMeshPrimitiveModelsForDaxShader();
 			}

@@ -10,6 +10,7 @@ import de.javagl.jgltf.model.GltfModel;
 import de.javagl.jgltf.model.MaterialModel;
 import de.javagl.jgltf.model.NodeModel;
 import de.javagl.jgltf.model.SceneModel;
+import de.javagl.jgltf.model.SkinModel;
 import de.javagl.jgltf.model.TextureModel;
 
 import java.util.ArrayList;
@@ -49,6 +50,12 @@ public class DefaultDaxShaderRenderedGltfModelCreator extends DefaultRenderedGlt
 
 		for (int i = 0; i < nodeModels.size(); i++) {
 			nodeAccessors[i] = createNodeAccessor(nodeModels.get(i));
+		}
+
+		List<SkinModel> skinModels = gltfModel.getSkinModels();
+		nodeSkinLookup = new IdentityHashMap<>(skinModels.size());
+		for (SkinModel skinModel : skinModels) {
+			nodeSkinLookup.put(skinModel, createNodeSkin(skinModel));
 		}
 
 		Map<NodeModel, Map.Entry<CommonNodeAccessor, List<DefaultRenderedNodeModel>>> rootNodeLookup = createRootNodeLookup();

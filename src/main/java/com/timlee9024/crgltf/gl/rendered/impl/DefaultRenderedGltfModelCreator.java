@@ -40,6 +40,7 @@ public class DefaultRenderedGltfModelCreator {
 	protected Map<BufferViewModel, Integer> glBufferLookup;
 	protected Map<NodeModel, CommonNodeAccessor> nodeAccessorLookup;
 	protected Map<NodeModel, DefaultRenderedNodeModel> renderedNodeModelLookup;
+	protected Map<SkinModel, DefaultNodeSkin> nodeSkinLookup;
 	protected List<DefaultRenderedNodeModel> renderedNodeModelTree;
 
 	public DefaultRenderedGltfModel create(GltfModel gltfModel) {
@@ -66,6 +67,12 @@ public class DefaultRenderedGltfModelCreator {
 
 		for (int i = 0; i < nodeModels.size(); i++) {
 			nodeAccessors[i] = createNodeAccessor(nodeModels.get(i));
+		}
+
+		List<SkinModel> skinModels = gltfModel.getSkinModels();
+		nodeSkinLookup = new IdentityHashMap<>(skinModels.size());
+		for (SkinModel skinModel : skinModels) {
+			nodeSkinLookup.put(skinModel, createNodeSkin(skinModel));
 		}
 
 		Map<NodeModel, Map.Entry<CommonNodeAccessor, List<DefaultRenderedNodeModel>>> rootNodeLookup = createRootNodeLookup();
@@ -121,6 +128,40 @@ public class DefaultRenderedGltfModelCreator {
 		return nodeAccessor;
 	}
 
+	protected DefaultNodeSkin createNodeSkin(SkinModel skinModel) {
+		DefaultNodeSkin nodeSkin;
+		AccessorModel inverseBindMatrixAccessorModel = skinModel.getInverseBindMatrices();
+		if (inverseBindMatrixAccessorModel != null) {
+			DefaultNodeSkinWithInverseBindMatrices nodeSkinWithInverseBindMatrices = new DefaultNodeSkinWithInverseBindMatrices();
+			glVertexArrays.add(nodeSkinWithInverseBindMatrices.glInverseBindMatrixVAO = GL30.glGenVertexArrays());
+			GL30.glBindVertexArray(nodeSkinWithInverseBindMatrices.glInverseBindMatrixVAO);
+
+			uploadAndBindArrayBuffer(inverseBindMatrixAccessorModel.getBufferViewModel());
+			for (int i = 0; i < 4; i++) {
+				GL20.glVertexAttribPointer(
+						GltfCalcJointMatrixPassConstants.getInstance().getInverseBindMatrixIn() + i,
+						4,
+						inverseBindMatrixAccessorModel.getComponentType(),
+						false,
+						inverseBindMatrixAccessorModel.getByteStride(),
+						inverseBindMatrixAccessorModel.getByteOffset() + 16 * i);
+				GL20.glEnableVertexAttribArray(GltfCalcJointMatrixPassConstants.getInstance().getInverseBindMatrixIn() + i);
+			}
+			nodeSkin = nodeSkinWithInverseBindMatrices;
+		} else nodeSkin = new DefaultNodeSkin();
+
+		List<NodeModel> joints = skinModel.getJoints();
+		int jointCount = joints.size();
+		nodeSkin.jointNodeAccessors = new NodeAccessor[jointCount];
+		glBuffers.add(nodeSkin.glJointMatrixBuffer = GL15.glGenBuffers());
+		GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, nodeSkin.glJointMatrixBuffer);
+		GL15.glBufferData(GL43.GL_SHADER_STORAGE_BUFFER, (long) jointCount * ElementType.MAT4.getNumComponents() * Float.BYTES, GL15.GL_STATIC_DRAW);
+		for (int i = 0; i < jointCount; i++) {
+			nodeSkin.jointNodeAccessors[i] = nodeAccessorLookup.get(joints.get(i));
+		}
+		return nodeSkin;
+	}
+
 	protected Map<NodeModel, Map.Entry<CommonNodeAccessor, List<DefaultRenderedNodeModel>>> createRootNodeLookup() {
 		Map<NodeModel, Map.Entry<CommonNodeAccessor, List<DefaultRenderedNodeModel>>> rootNodeLookup = new IdentityHashMap<>(nodeModels.size());
 		for (NodeModel nodeModel : nodeModels) {
@@ -130,7 +171,13 @@ public class DefaultRenderedGltfModelCreator {
 				renderedNodeModelTree = new ArrayList<>(nodeModels.size());
 				rootNodeLookup.put(nodeModel, new AbstractMap.SimpleEntry<>(nodeAccessor, renderedNodeModelTree));
 
-				configureNodeSkin(nodeModel);
+				DefaultRenderedNodeModel renderedNodeModel = renderedNodeModelLookup.get(nodeModel);
+				if (renderedNodeModel != null) {
+					renderedNodeModelTree.add(renderedNodeModel);
+					SkinModel skinModel = nodeModel.getSkinModel();
+					if (skinModel != null) renderedNodeModel.nodeSkin = nodeSkinLookup.get(skinModel);
+					else renderedNodeModel.nodeSkin = DefaultNodeSkin.DUMMY;
+				}
 
 				List<NodeModel> childNodeModels = nodeModel.getChildren();
 				nodeAccessor.children = new CommonNodeAccessor[childNodeModels.size()];
@@ -147,7 +194,13 @@ public class DefaultRenderedGltfModelCreator {
 		CommonNodeAccessor nodeAccessor = nodeAccessorLookup.get(nodeModel);
 		nodeAccessor.initGlobalTransform(parentNodeAccessor.getOriginalGlobalTransformMatrix());
 
-		configureNodeSkin(nodeModel);
+		DefaultRenderedNodeModel renderedNodeModel = renderedNodeModelLookup.get(nodeModel);
+		if (renderedNodeModel != null) {
+			renderedNodeModelTree.add(renderedNodeModel);
+			SkinModel skinModel = nodeModel.getSkinModel();
+			if (skinModel != null) renderedNodeModel.nodeSkin = nodeSkinLookup.get(skinModel);
+			else renderedNodeModel.nodeSkin = DefaultNodeSkin.DUMMY;
+		}
 
 		List<NodeModel> childNodeModels = nodeModel.getChildren();
 		nodeAccessor.children = new CommonNodeAccessor[childNodeModels.size()];
@@ -156,47 +209,6 @@ public class DefaultRenderedGltfModelCreator {
 			nodeAccessor.children[i] = resolveChildNode(childNodeModel, nodeAccessor);
 		}
 		return nodeAccessor;
-	}
-
-	protected void configureNodeSkin(NodeModel nodeModel) {
-		DefaultRenderedNodeModel renderedNodeModel = renderedNodeModelLookup.get(nodeModel);
-		if (renderedNodeModel != null) {
-			renderedNodeModelTree.add(renderedNodeModel);
-			SkinModel skinModel = nodeModel.getSkinModel();
-			if (skinModel != null) {
-				AccessorModel inverseBindMatrixAccessorModel = skinModel.getInverseBindMatrices();
-				if (inverseBindMatrixAccessorModel != null) {
-					DefaultRenderedNodeModel.SkinningWithInverseBindMatrices skinning = renderedNodeModel.new SkinningWithInverseBindMatrices();
-					renderedNodeModel.skinning = skinning;
-					skinning.glInverseBindMatrixVAO = GL30.glGenVertexArrays();
-					glVertexArrays.add(skinning.glInverseBindMatrixVAO);
-					GL30.glBindVertexArray(skinning.glInverseBindMatrixVAO);
-
-					uploadAndBindArrayBuffer(inverseBindMatrixAccessorModel.getBufferViewModel());
-					for (int i = 0; i < 4; i++) {
-						GL20.glVertexAttribPointer(
-								GltfCalcJointMatrixPassConstants.getInstance().getInverseBindMatrixIn() + i,
-								4,
-								inverseBindMatrixAccessorModel.getComponentType(),
-								false,
-								inverseBindMatrixAccessorModel.getByteStride(),
-								inverseBindMatrixAccessorModel.getByteOffset() + 16 * i);
-						GL20.glEnableVertexAttribArray(GltfCalcJointMatrixPassConstants.getInstance().getInverseBindMatrixIn() + i);
-					}
-				} else renderedNodeModel.skinning = renderedNodeModel.new Skinning();
-
-				List<NodeModel> joints = skinModel.getJoints();
-				int jointCount = joints.size();
-				renderedNodeModel.skinning.jointNodeAccessors = new NodeAccessor[jointCount];
-				renderedNodeModel.skinning.glJointMatrixBuffer = GL15.glGenBuffers();
-				glBuffers.add(renderedNodeModel.skinning.glJointMatrixBuffer);
-				GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, renderedNodeModel.skinning.glJointMatrixBuffer);
-				GL15.glBufferData(GL43.GL_SHADER_STORAGE_BUFFER, (long) jointCount * ElementType.MAT4.getNumComponents() * Float.BYTES, GL15.GL_STATIC_DRAW);
-				for (int i = 0; i < jointCount; i++) {
-					renderedNodeModel.skinning.jointNodeAccessors[i] = nodeAccessorLookup.get(joints.get(i));
-				}
-			} else renderedNodeModel.skinning = DefaultRenderedNodeModel.Skinning.DUMMY;
-		}
 	}
 
 	protected void uploadAndBindArrayBuffer(BufferViewModel bufferViewModel) {
@@ -217,15 +229,16 @@ public class DefaultRenderedGltfModelCreator {
 				break;
 			}
 		}
+		List<DefaultNodeSkin> nodeSkins = new ArrayList<>(nodeSkinLookup.size());
 		for (DefaultRenderedNodeModel renderedNodeModel : renderedSceneModel.renderedNodeModels) {
-			if (renderedNodeModel.skinning instanceof DefaultRenderedNodeModel.SkinningWithInverseBindMatrices) {
-				renderedSceneModel.hasSkinning = true;
+			if (renderedNodeModel.nodeSkin instanceof DefaultNodeSkinWithInverseBindMatrices) {
 				renderedSceneModel.hasInverseBindMatrices = true;
-				break;
-			} else if (renderedNodeModel.skinning != DefaultRenderedNodeModel.Skinning.DUMMY) {
-				renderedSceneModel.hasSkinning = true;
+				if(nodeSkins.stream().noneMatch(n -> n == renderedNodeModel.nodeSkin)) nodeSkins.add(renderedNodeModel.nodeSkin);
+			} else if (renderedNodeModel.nodeSkin != DefaultNodeSkin.DUMMY) {
+				if(nodeSkins.stream().noneMatch(n -> n == renderedNodeModel.nodeSkin)) nodeSkins.add(renderedNodeModel.nodeSkin);
 			}
 		}
+		if(!nodeSkins.isEmpty()) renderedSceneModel.nodeSkins = nodeSkins.toArray(new DefaultNodeSkin[0]);
 	}
 
 }

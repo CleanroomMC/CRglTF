@@ -4,6 +4,7 @@ import com.timlee9024.crgltf.gl.constants.GltfApplySkinMatrixPassConstants;
 import com.timlee9024.crgltf.gl.constants.GltfCalcJointMatrixPassConstants;
 import com.timlee9024.crgltf.gl.constants.GltfCalcSkinMatrixPassConstants;
 import com.timlee9024.crgltf.gl.constants.GltfMorphingPassConstants;
+import com.timlee9024.crgltf.gl.rendered.impl.DefaultNodeSkin;
 import com.timlee9024.crgltf.gl.rendered.impl.DefaultRenderedNodeModel;
 import com.timlee9024.crgltf.gl.rendered.impl.DefaultRenderedSceneModel;
 import org.lwjgl.opengl.GL11;
@@ -25,21 +26,21 @@ public class DefaultDaxShaderRenderedSceneModel extends DefaultRenderedSceneMode
 			for (DefaultRenderedNodeModel renderedNodeModel : renderedNodeModels)
 				renderedNodeModel.morphing.runMorphingPass();
 
-			if (hasSkinning) {
+			if (nodeSkins != null) {
 				if (hasInverseBindMatrices) {
 					GL20.glUseProgram(GltfCalcJointMatrixPassConstants.getInstance().getGlProgram());
-					for (DefaultRenderedNodeModel renderedNodeModel : renderedNodeModels)
-						renderedNodeModel.skinning.runCalcJointMatrixPass();
 				}
+				for (DefaultNodeSkin nodeSkin : nodeSkins)
+					nodeSkin.runCalcJointMatrixPass();
 
 				GL20.glUseProgram(GltfCalcSkinMatrixPassConstants.getInstance().getGlProgram());
 				for (DefaultRenderedNodeModel renderedNodeModel : renderedNodeModels)
-					renderedNodeModel.skinning.runCalcSkinMatrixPass();
+					renderedNodeModel.nodeSkin.runCalcSkinMatrixPass(renderedNodeModel.renderedMeshModels);
 
 				GL20.glUseProgram(GltfApplySkinMatrixPassConstants.getInstance().getGlProgram());
 				GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
 				for (DefaultRenderedNodeModel renderedNodeModel : renderedNodeModels)
-					renderedNodeModel.skinning.runApplySkinMatrixPass();
+					renderedNodeModel.nodeSkin.runApplySkinMatrixPass(renderedNodeModel.renderedMeshModels);
 			}
 
 			GL20.glUseProgram(currentGlProgram);
@@ -52,23 +53,23 @@ public class DefaultDaxShaderRenderedSceneModel extends DefaultRenderedSceneMode
 
 			GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, 0);
 		} else {
-			if (hasSkinning) {
+			if (nodeSkins != null) {
 				GL11.glEnable(GL30.GL_RASTERIZER_DISCARD);
 
 				if (hasInverseBindMatrices) {
 					GL20.glUseProgram(GltfCalcJointMatrixPassConstants.getInstance().getGlProgram());
-					for (DefaultRenderedNodeModel renderedNodeModel : renderedNodeModels)
-						renderedNodeModel.skinning.runCalcJointMatrixPass();
 				}
+				for (DefaultNodeSkin nodeSkin : nodeSkins)
+					nodeSkin.runCalcJointMatrixPass();
 
 				GL20.glUseProgram(GltfCalcSkinMatrixPassConstants.getInstance().getGlProgram());
 				for (DefaultRenderedNodeModel renderedNodeModel : renderedNodeModels)
-					renderedNodeModel.skinning.runCalcSkinMatrixPass();
+					renderedNodeModel.nodeSkin.runCalcSkinMatrixPass(renderedNodeModel.renderedMeshModels);
 
 				GL20.glUseProgram(GltfApplySkinMatrixPassConstants.getInstance().getGlProgram());
 				GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
 				for (DefaultRenderedNodeModel renderedNodeModel : renderedNodeModels)
-					renderedNodeModel.skinning.runApplySkinMatrixPass();
+					renderedNodeModel.nodeSkin.runApplySkinMatrixPass(renderedNodeModel.renderedMeshModels);
 
 				GL20.glUseProgram(currentGlProgram);
 				GL11.glDisable(GL30.GL_RASTERIZER_DISCARD);
