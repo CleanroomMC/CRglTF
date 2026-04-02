@@ -261,8 +261,18 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 						false,
 						targetAccessorModel.getByteStride(),
 						targetAccessorModel.getByteOffset());
-				GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getPositionTarget());
+			} else {
+				GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, GltfMorphingPassConstants.getInstance().getGlZeroVec4Buffer());
+				GL20.glVertexAttribPointer(
+						GltfMorphingPassConstants.getInstance().getPositionTarget(),
+						3,
+						GL11.GL_FLOAT,
+						false,
+						0,
+						0);
 			}
+			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getPositionTarget());
+
 			targetAccessorModel = morphTarget.get("NORMAL");
 			if (targetAccessorModel != null) {
 				uploadAndBindArrayBuffer(targetAccessorModel.getBufferViewModel());
@@ -273,8 +283,18 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 						false,
 						targetAccessorModel.getByteStride(),
 						targetAccessorModel.getByteOffset());
-				GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getNormalTarget());
+			} else {
+				GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, GltfMorphingPassConstants.getInstance().getGlZeroVec4Buffer());
+				GL20.glVertexAttribPointer(
+						GltfMorphingPassConstants.getInstance().getNormalTarget(),
+						3,
+						GL11.GL_FLOAT,
+						false,
+						0,
+						0);
 			}
+			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getNormalTarget());
+
 			targetAccessorModel = morphTarget.get("TANGENT");
 			if (targetAccessorModel != null) {
 				uploadAndBindArrayBuffer(targetAccessorModel.getBufferViewModel());
@@ -285,8 +305,18 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 						false,
 						targetAccessorModel.getByteStride(),
 						targetAccessorModel.getByteOffset());
-				GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTangentTarget());
+			} else {
+				GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, GltfMorphingPassConstants.getInstance().getGlZeroVec4Buffer());
+				GL20.glVertexAttribPointer(
+						GltfMorphingPassConstants.getInstance().getTangentTarget(),
+						3,
+						GL11.GL_FLOAT,
+						false,
+						0,
+						0);
 			}
+			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTangentTarget());
+
 			GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, glBaseTangentBuffer);
 			GL20.glVertexAttribPointer(
 					GltfMorphingPassConstants.getInstance().getTangentBase(),
@@ -296,6 +326,7 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 					tangentsAccessorModel.getByteStride(),
 					tangentsAccessorModel.getByteOffset());
 			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTangentBase());
+
 			targetAccessorModel = morphTarget.get("COLOR_0");
 			if (targetAccessorModel != null) {
 				uploadAndBindArrayBuffer(targetAccessorModel.getBufferViewModel());
@@ -306,8 +337,18 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 						false,
 						targetAccessorModel.getByteStride(),
 						targetAccessorModel.getByteOffset());
-				GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getColorTarget());
+			} else {
+				GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, GltfMorphingPassConstants.getInstance().getGlZeroVec4Buffer());
+				GL20.glVertexAttribPointer(
+						GltfMorphingPassConstants.getInstance().getColorTarget(),
+						4,
+						GL11.GL_FLOAT,
+						false,
+						0,
+						0);
 			}
+			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getColorTarget());
+
 			targetAccessorModel = morphTarget.get("TEXCOORD_0");
 			if (targetAccessorModel != null) {
 				uploadAndBindArrayBuffer(targetAccessorModel.getBufferViewModel());
@@ -318,8 +359,17 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 						false,
 						targetAccessorModel.getByteStride(),
 						targetAccessorModel.getByteOffset());
-				GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTexcoordTarget());
+			} else {
+				GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, GltfMorphingPassConstants.getInstance().getGlZeroVec4Buffer());
+				GL20.glVertexAttribPointer(
+						GltfMorphingPassConstants.getInstance().getTexcoordTarget(),
+						2,
+						GL11.GL_FLOAT,
+						false,
+						0,
+						0);
 			}
+			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTexcoordTarget());
 		}
 
 		for (int c = 1; c < renderedMeshPrimitiveModel.morphing.attributeBundles.length; c++) {
@@ -379,8 +429,18 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 							false,
 							targetAccessorModel.getByteStride(),
 							targetAccessorModel.getByteOffset());
-					GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getColorTarget());
+				} else {
+					GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, GltfMorphingPassConstants.getInstance().getGlZeroVec4Buffer());
+					GL20.glVertexAttribPointer(
+							GltfMorphingPassConstants.getInstance().getColorTarget(),
+							4,
+							GL11.GL_FLOAT,
+							false,
+							0,
+							0);
 				}
+				GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getColorTarget());
+
 				targetAccessorModel = morphTarget.get("TEXCOORD_" + c);
 				if (targetAccessorModel != null) {
 					uploadAndBindArrayBuffer(targetAccessorModel.getBufferViewModel());
@@ -391,8 +451,17 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 							false,
 							targetAccessorModel.getByteStride(),
 							targetAccessorModel.getByteOffset());
-					GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTexcoordTarget());
+				} else {
+					GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, GltfMorphingPassConstants.getInstance().getGlZeroVec4Buffer());
+					GL20.glVertexAttribPointer(
+							GltfMorphingPassConstants.getInstance().getTexcoordTarget(),
+							2,
+							GL11.GL_FLOAT,
+							false,
+							0,
+							0);
 				}
+				GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTexcoordTarget());
 			}
 		}
 

@@ -1,6 +1,7 @@
 package com.timlee9024.crgltf.gl.constants;
 
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import org.lwjgl.opengl.GL15;
 import org.lwjgl.opengl.GL20;
 
 public class GltfMorphingPassConstants {
@@ -9,12 +10,19 @@ public class GltfMorphingPassConstants {
 
 	protected final int glProgram;
 
+	protected final int glZeroVec4Buffer;
+
 	public static GltfMorphingPassConstants getInstance() {
 		return instance;
 	}
 
 	public GltfMorphingPassConstants() {
 		glProgram = createGlProgram();
+
+		glZeroVec4Buffer = GL15.glGenBuffers();
+		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, glZeroVec4Buffer);
+		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, new float[]{0.0f, 0.0f, 0.0f, 0.0f}, GL15.GL_STATIC_DRAW);
+		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
 	}
 
 	public void onEvent(FMLPreInitializationEvent event) {
@@ -112,5 +120,7 @@ public class GltfMorphingPassConstants {
 	public int getMorphBufferStride() {
 		return 16;
 	}
-
+	public int getGlZeroVec4Buffer() {
+		return glZeroVec4Buffer;
+	}
 }
