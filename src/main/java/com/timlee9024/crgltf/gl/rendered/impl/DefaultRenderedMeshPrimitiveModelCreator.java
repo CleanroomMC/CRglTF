@@ -7,7 +7,6 @@ import com.timlee9024.crgltf.gl.constants.GltfMorphingPassConstants;
 import com.timlee9024.crgltf.gl.constants.VanillaRenderConstants;
 import de.javagl.jgltf.model.AccessorModel;
 import de.javagl.jgltf.model.BufferViewModel;
-import de.javagl.jgltf.model.ElementType;
 import de.javagl.jgltf.model.MaterialModel;
 import de.javagl.jgltf.model.MeshPrimitiveModel;
 import de.javagl.jgltf.model.v2.MaterialModelV2;
@@ -36,226 +35,172 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 	protected AccessorModel normalsAccessorModel;
 	protected AccessorModel tangentsAccessorModel;
 	protected List<Map<String, AccessorModel>> morphTargets;
+	protected int skinMatrixTargetSize;
 
 	public DefaultRenderedMeshPrimitiveModel create(MeshPrimitiveModel meshPrimitiveModel) {
 		this.meshPrimitiveModel = meshPrimitiveModel;
 		attributes = meshPrimitiveModel.getAttributes();
 		positionsAccessorModel = attributes.get("POSITION");
 		if (positionsAccessorModel != null) {
+			normalsAccessorModel = attributes.get("NORMAL");
+			tangentsAccessorModel = attributes.get("TANGENT");
+			morphTargets = meshPrimitiveModel.getTargets();
+			skinMatrixTargetSize = getSkinMatrixTargetSize();
+
 			renderedMeshPrimitiveModel = new DefaultRenderedMeshPrimitiveModel();
-
-			AccessorModel indicesAccessorModel = meshPrimitiveModel.getIndices();
-			if (indicesAccessorModel != null) {
-				int indiceCount = indicesAccessorModel.getCount();
-				int mode = meshPrimitiveModel.getMode();
-				int type = indicesAccessorModel.getComponentType();
-				int offset = indicesAccessorModel.getByteOffset();
-				int glBuffer = uploadAndObtainElementArrayBuffer(indicesAccessorModel.getBufferViewModel());
-
-				DefaultRenderedMeshPrimitiveModel renderedMeshPrimitiveModel = this.renderedMeshPrimitiveModel;
-				renderedMeshPrimitiveModel.glDraw = () -> {
-					GL30.glBindVertexArray(renderedMeshPrimitiveModel.glRenderVAO);
-					GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, glBuffer);
-					GL11.glDrawElements(mode, indiceCount, type, offset);
-				};
-			} else {
-				int mode = meshPrimitiveModel.getMode();
-
-				DefaultRenderedMeshPrimitiveModel renderedMeshPrimitiveModel = this.renderedMeshPrimitiveModel;
-				renderedMeshPrimitiveModel.glDraw = () -> {
-					GL30.glBindVertexArray(renderedMeshPrimitiveModel.glRenderVAO);
-					GL11.glDrawArrays(mode, 0, renderedMeshPrimitiveModel.count);
-				};
-			}
 			renderedMeshPrimitiveModel.count = positionsAccessorModel.getCount();
-			int glRenderVAO = GL30.glGenVertexArrays();
-			renderedMeshPrimitiveModel.glRenderVAO = glRenderVAO;
-			glVertexArrays.add(glRenderVAO);
 
 			renderedMeshPrimitiveModel.renderedMaterialModel = renderedMaterialModelLookup.get(meshPrimitiveModel.getMaterialModel());
 			if (renderedMeshPrimitiveModel.renderedMaterialModel == null)
 				renderedMeshPrimitiveModel.renderedMaterialModel = DefaultRenderedMaterialModel.DEFAULT;
 
-			normalsAccessorModel = attributes.get("NORMAL");
-			tangentsAccessorModel = attributes.get("TANGENT");
+			glVertexArrays.add(renderedMeshPrimitiveModel.glRenderVAO = GL30.glGenVertexArrays());
 
-			morphTargets = meshPrimitiveModel.getTargets();
 			if (morphTargets.isEmpty()) {
 				renderedMeshPrimitiveModel.morphing = DefaultRenderedMeshPrimitiveModel.Morphing.DUMMY;
-				setupAttributes();
+				if (skinMatrixTargetSize == 0) {
+					renderedMeshPrimitiveModel.skinning = DefaultRenderedMeshPrimitiveModel.Skinning.DUMMY;
+					setupRenderPass();
+				} else {
+					setupSkinning();
+					setupRenderPassFromSkinning();
+				}
 			} else {
-				setupAttributesWithMorphing();
+				setupMorphing();
+				if (skinMatrixTargetSize == 0) {
+					renderedMeshPrimitiveModel.skinning = DefaultRenderedMeshPrimitiveModel.Skinning.DUMMY;
+					setupRenderPassFromMorphing();
+				} else {
+					setupSkinningFromMorphing();
+					setupRenderPassFromMorphingAndSkinning();
+				}
 			}
 			return renderedMeshPrimitiveModel;
 		}
-		return null;
+		return DefaultRenderedMeshPrimitiveModel.DUMMY;
 	}
 
 	public DefaultRenderedMeshPrimitiveModel createAlias(MeshPrimitiveModel meshPrimitiveModel, DefaultRenderedMeshPrimitiveModel baseRenderedMeshPrimitiveModel) {
 		if (baseRenderedMeshPrimitiveModel.morphing != DefaultRenderedMeshPrimitiveModel.Morphing.DUMMY) {
 			this.meshPrimitiveModel = meshPrimitiveModel;
 			this.baseRenderedMeshPrimitiveModel = baseRenderedMeshPrimitiveModel;
-			setupRenderAlias();
-			setupMorphingSkinningAlias();
+
+			renderedMeshPrimitiveModel = new DefaultRenderedMeshPrimitiveModel();
+			renderedMeshPrimitiveModel.count = baseRenderedMeshPrimitiveModel.count;
 			renderedMeshPrimitiveModel.renderedMaterialModel = renderedMaterialModelLookup.get(meshPrimitiveModel.getMaterialModel());
+
+			glVertexArrays.add(renderedMeshPrimitiveModel.glRenderVAO = GL30.glGenVertexArrays());
+
+			setupMorphingAlias();
+			if (baseRenderedMeshPrimitiveModel.skinning != DefaultRenderedMeshPrimitiveModel.Skinning.DUMMY) {
+				setupSkinningFromMorphingAlias();
+				setupRenderPassFromMorphingAndSkinning();
+			} else {
+				renderedMeshPrimitiveModel.skinning = DefaultRenderedMeshPrimitiveModel.Skinning.DUMMY;
+				setupRenderPassFromMorphing();
+			}
 		} else if (baseRenderedMeshPrimitiveModel.skinning != DefaultRenderedMeshPrimitiveModel.Skinning.DUMMY) {
 			this.meshPrimitiveModel = meshPrimitiveModel;
 			this.baseRenderedMeshPrimitiveModel = baseRenderedMeshPrimitiveModel;
-			setupRenderAlias();
-			setupSkinningAlias();
+
+			renderedMeshPrimitiveModel = new DefaultRenderedMeshPrimitiveModel();
+			renderedMeshPrimitiveModel.morphing = DefaultRenderedMeshPrimitiveModel.Morphing.DUMMY;
+			renderedMeshPrimitiveModel.count = baseRenderedMeshPrimitiveModel.count;
 			renderedMeshPrimitiveModel.renderedMaterialModel = renderedMaterialModelLookup.get(meshPrimitiveModel.getMaterialModel());
+
+			glVertexArrays.add(renderedMeshPrimitiveModel.glRenderVAO = GL30.glGenVertexArrays());
+
+			setupSkinningAlias();
+			setupRenderPassFromSkinning();
 		} else return baseRenderedMeshPrimitiveModel;
 		return renderedMeshPrimitiveModel;
 	}
 
-	protected void setupAttributes() {
-		int skinMatrixTargetSize = getSkinMatrixTargetSize();
-		if (skinMatrixTargetSize > 0) {
-			renderedMeshPrimitiveModel.skinning = renderedMeshPrimitiveModel.new Skinning();
-			renderedMeshPrimitiveModel.skinning.glSkinMatrixTargetVAOs = new int[skinMatrixTargetSize];
-			setupJointAndWeightAttribute();
-
-			int glVertexSrcVAO = GL30.glGenVertexArrays();
-			renderedMeshPrimitiveModel.skinning.glVertexSrcVAO = glVertexSrcVAO;
-			glVertexArrays.add(glVertexSrcVAO);
-			GL30.glBindVertexArray(glVertexSrcVAO);
-
-			renderedMeshPrimitiveModel.skinning.skinMatrixSize = (long) renderedMeshPrimitiveModel.count * Float.BYTES * ElementType.MAT4.getNumComponents();
-			setupSkinMatrixtAttribute();
-
-			uploadAndBindArrayBuffer(positionsAccessorModel.getBufferViewModel());
-			GL20.glVertexAttribPointer(
-					GltfApplySkinMatrixPassConstants.getInstance().getPositionIn(),
-					positionsAccessorModel.getElementType().getNumComponents(),
-					positionsAccessorModel.getComponentType(),
-					false,
-					positionsAccessorModel.getByteStride(),
-					positionsAccessorModel.getByteOffset());
-			GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getPositionIn());
-
-			uploadAndBindArrayBuffer(normalsAccessorModel.getBufferViewModel());
-			GL20.glVertexAttribPointer(
-					GltfApplySkinMatrixPassConstants.getInstance().getNormalIn(),
-					normalsAccessorModel.getElementType().getNumComponents(),
-					normalsAccessorModel.getComponentType(),
-					false,
-					normalsAccessorModel.getByteStride(),
-					normalsAccessorModel.getByteOffset());
-			GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getNormalIn());
-
-			uploadAndBindArrayBuffer(tangentsAccessorModel.getBufferViewModel());
-			GL20.glVertexAttribPointer(
-					GltfApplySkinMatrixPassConstants.getInstance().getTangentIn(),
-					tangentsAccessorModel.getElementType().getNumComponents(),
-					tangentsAccessorModel.getComponentType(),
-					false,
-					tangentsAccessorModel.getByteStride(),
-					tangentsAccessorModel.getByteOffset());
-			GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getTangentIn());
-
-			GL30.glBindVertexArray(renderedMeshPrimitiveModel.glRenderVAO);
-
-			setupRequiredAttributeFromSkinning();
-		} else {
-			renderedMeshPrimitiveModel.skinning = DefaultRenderedMeshPrimitiveModel.Skinning.DUMMY;
-
-			GL30.glBindVertexArray(renderedMeshPrimitiveModel.glRenderVAO);
-
-			setupRequiredAttribute();
-		}
-		setupColorAttribute();
-		setupTexcoordAttribute();
-	}
-
-	protected void setupAttributesWithMorphing() {
+	protected void setupMorphing() {
 		renderedMeshPrimitiveModel.morphing = renderedMeshPrimitiveModel.new Morphing();
-		renderedMeshPrimitiveModel.morphing.morphBufferSize = (long) renderedMeshPrimitiveModel.count * Float.BYTES * GltfMorphingPassConstants.getInstance().getMorphBufferStride();
+		renderedMeshPrimitiveModel.morphing.morphBufferSize = (long) renderedMeshPrimitiveModel.count * GltfMorphingPassConstants.getInstance().getMorphBufferStride();
 		renderedMeshPrimitiveModel.morphing.attributeBundles = new DefaultRenderedMeshPrimitiveModel.Morphing.AttributeBundle[getMorphAttributeBundleSize()];
 
 		DefaultRenderedMeshPrimitiveModel.Morphing.AttributeBundle mainBundle = renderedMeshPrimitiveModel.morphing.attributeBundles[0] = renderedMeshPrimitiveModel.morphing.new AttributeBundle();
-		int glMainOriginalAttributesVAO = GL30.glGenVertexArrays();
-		mainBundle.glOriginalAttributesVAO = glMainOriginalAttributesVAO;
-		glVertexArrays.add(glMainOriginalAttributesVAO);
-		GL30.glBindVertexArray(glMainOriginalAttributesVAO);
+		glVertexArrays.add(mainBundle.glBaseAttributesVAO = GL30.glGenVertexArrays());
+		GL30.glBindVertexArray(mainBundle.glBaseAttributesVAO);
 
-		uploadAndBindArrayBuffer(positionsAccessorModel.getBufferViewModel());
+		uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, positionsAccessorModel.getBufferViewModel());
 		GL20.glVertexAttribPointer(
-				GltfMorphingPassConstants.getInstance().getPositionTarget(),
+				GltfMorphingPassConstants.getInstance().getPositionTargetAttribute(),
 				positionsAccessorModel.getElementType().getNumComponents(),
 				positionsAccessorModel.getComponentType(),
 				false,
 				positionsAccessorModel.getByteStride(),
 				positionsAccessorModel.getByteOffset());
-		GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getPositionTarget());
+		GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getPositionTargetAttribute());
 
-		uploadAndBindArrayBuffer(normalsAccessorModel.getBufferViewModel());
+		uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, normalsAccessorModel.getBufferViewModel());
 		GL20.glVertexAttribPointer(
-				GltfMorphingPassConstants.getInstance().getNormalTarget(),
+				GltfMorphingPassConstants.getInstance().getNormalTargetAttribute(),
 				normalsAccessorModel.getElementType().getNumComponents(),
 				normalsAccessorModel.getComponentType(),
 				false,
 				normalsAccessorModel.getByteStride(),
 				normalsAccessorModel.getByteOffset());
-		GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getNormalTarget());
+		GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getNormalTargetAttribute());
 
-		int glBaseTangentBuffer = uploadAndBindArrayBuffer(tangentsAccessorModel.getBufferViewModel());
+		int glBaseTangentBuffer = uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, tangentsAccessorModel.getBufferViewModel());
 		GL20.glVertexAttribPointer(
-				GltfMorphingPassConstants.getInstance().getTangentTarget(),
+				GltfMorphingPassConstants.getInstance().getTangentTargetAttribute(),
 				tangentsAccessorModel.getElementType().getNumComponents(),
 				tangentsAccessorModel.getComponentType(),
 				false,
 				tangentsAccessorModel.getByteStride(),
 				tangentsAccessorModel.getByteOffset());
-		GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTangentTarget());
+		GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTangentTargetAttribute());
 		GL20.glVertexAttribPointer(
-				GltfMorphingPassConstants.getInstance().getTangentBase(),
+				GltfMorphingPassConstants.getInstance().getTangentBaseAttribute(),
 				tangentsAccessorModel.getElementType().getNumComponents(),
 				tangentsAccessorModel.getComponentType(),
 				false,
 				tangentsAccessorModel.getByteStride(),
 				tangentsAccessorModel.getByteOffset());
-		GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTangentBase());
+		GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTangentBaseAttribute());
 
 		AccessorModel colorsAccessorModel = attributes.get("COLOR_0");
 		if (colorsAccessorModel != null) {
-			uploadAndBindArrayBuffer(colorsAccessorModel.getBufferViewModel());
+			uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, colorsAccessorModel.getBufferViewModel());
 			GL20.glVertexAttribPointer(
-					GltfMorphingPassConstants.getInstance().getColorTarget(),
+					GltfMorphingPassConstants.getInstance().getColorTargetAttribute(),
 					colorsAccessorModel.getElementType().getNumComponents(),
 					colorsAccessorModel.getComponentType(),
 					false,
 					colorsAccessorModel.getByteStride(),
 					colorsAccessorModel.getByteOffset());
-			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getColorTarget());
+			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getColorTargetAttribute());
 		}
 
 		AccessorModel texcoordsAccessorModel = attributes.get("TEXCOORD_0");
 		if (texcoordsAccessorModel != null) {
-			uploadAndBindArrayBuffer(texcoordsAccessorModel.getBufferViewModel());
+			uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, texcoordsAccessorModel.getBufferViewModel());
 			GL20.glVertexAttribPointer(
-					GltfMorphingPassConstants.getInstance().getTexcoordTarget(),
+					GltfMorphingPassConstants.getInstance().getTexcoordTargetAttribute(),
 					texcoordsAccessorModel.getElementType().getNumComponents(),
 					texcoordsAccessorModel.getComponentType(),
 					false,
 					texcoordsAccessorModel.getByteStride(),
 					texcoordsAccessorModel.getByteOffset());
-			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTexcoordTarget());
+			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTexcoordTargetAttribute());
 		}
 
 		mainBundle.glMorphTargetVAOs = new int[morphTargets.size()];
 		for (int i = 0; i < morphTargets.size(); i++) {
 			Map<String, AccessorModel> morphTarget = morphTargets.get(i);
-			int glMorphTargetVAO = GL30.glGenVertexArrays();
-			mainBundle.glMorphTargetVAOs[i] = glMorphTargetVAO;
-			glVertexArrays.add(glMorphTargetVAO);
-			GL30.glBindVertexArray(glMorphTargetVAO);
+			glVertexArrays.add(mainBundle.glMorphTargetVAOs[i] = GL30.glGenVertexArrays());
+			GL30.glBindVertexArray(mainBundle.glMorphTargetVAOs[i]);
 
 			AccessorModel targetAccessorModel;
 			targetAccessorModel = morphTarget.get("POSITION");
 			if (targetAccessorModel != null) {
-				uploadAndBindArrayBuffer(targetAccessorModel.getBufferViewModel());
+				uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, targetAccessorModel.getBufferViewModel());
 				GL20.glVertexAttribPointer(
-						GltfMorphingPassConstants.getInstance().getPositionTarget(),
+						GltfMorphingPassConstants.getInstance().getPositionTargetAttribute(),
 						targetAccessorModel.getElementType().getNumComponents(),
 						targetAccessorModel.getComponentType(),
 						false,
@@ -264,20 +209,20 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 			} else {
 				GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, GltfMorphingPassConstants.getInstance().getGlZeroVec4Buffer());
 				GL20.glVertexAttribPointer(
-						GltfMorphingPassConstants.getInstance().getPositionTarget(),
+						GltfMorphingPassConstants.getInstance().getPositionTargetAttribute(),
 						3,
 						GL11.GL_FLOAT,
 						false,
 						0,
 						0);
 			}
-			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getPositionTarget());
+			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getPositionTargetAttribute());
 
 			targetAccessorModel = morphTarget.get("NORMAL");
 			if (targetAccessorModel != null) {
-				uploadAndBindArrayBuffer(targetAccessorModel.getBufferViewModel());
+				uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, targetAccessorModel.getBufferViewModel());
 				GL20.glVertexAttribPointer(
-						GltfMorphingPassConstants.getInstance().getNormalTarget(),
+						GltfMorphingPassConstants.getInstance().getNormalTargetAttribute(),
 						targetAccessorModel.getElementType().getNumComponents(),
 						targetAccessorModel.getComponentType(),
 						false,
@@ -286,20 +231,20 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 			} else {
 				GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, GltfMorphingPassConstants.getInstance().getGlZeroVec4Buffer());
 				GL20.glVertexAttribPointer(
-						GltfMorphingPassConstants.getInstance().getNormalTarget(),
+						GltfMorphingPassConstants.getInstance().getNormalTargetAttribute(),
 						3,
 						GL11.GL_FLOAT,
 						false,
 						0,
 						0);
 			}
-			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getNormalTarget());
+			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getNormalTargetAttribute());
 
 			targetAccessorModel = morphTarget.get("TANGENT");
 			if (targetAccessorModel != null) {
-				uploadAndBindArrayBuffer(targetAccessorModel.getBufferViewModel());
+				uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, targetAccessorModel.getBufferViewModel());
 				GL20.glVertexAttribPointer(
-						GltfMorphingPassConstants.getInstance().getTangentTarget(),
+						GltfMorphingPassConstants.getInstance().getTangentTargetAttribute(),
 						targetAccessorModel.getElementType().getNumComponents(),
 						targetAccessorModel.getComponentType(),
 						false,
@@ -308,30 +253,30 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 			} else {
 				GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, GltfMorphingPassConstants.getInstance().getGlZeroVec4Buffer());
 				GL20.glVertexAttribPointer(
-						GltfMorphingPassConstants.getInstance().getTangentTarget(),
+						GltfMorphingPassConstants.getInstance().getTangentTargetAttribute(),
 						3,
 						GL11.GL_FLOAT,
 						false,
 						0,
 						0);
 			}
-			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTangentTarget());
+			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTangentTargetAttribute());
 
 			GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, glBaseTangentBuffer);
 			GL20.glVertexAttribPointer(
-					GltfMorphingPassConstants.getInstance().getTangentBase(),
+					GltfMorphingPassConstants.getInstance().getTangentBaseAttribute(),
 					tangentsAccessorModel.getElementType().getNumComponents(),
 					tangentsAccessorModel.getComponentType(),
 					false,
 					tangentsAccessorModel.getByteStride(),
 					tangentsAccessorModel.getByteOffset());
-			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTangentBase());
+			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTangentBaseAttribute());
 
 			targetAccessorModel = morphTarget.get("COLOR_0");
 			if (targetAccessorModel != null) {
-				uploadAndBindArrayBuffer(targetAccessorModel.getBufferViewModel());
+				uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, targetAccessorModel.getBufferViewModel());
 				GL20.glVertexAttribPointer(
-						GltfMorphingPassConstants.getInstance().getColorTarget(),
+						GltfMorphingPassConstants.getInstance().getColorTargetAttribute(),
 						targetAccessorModel.getElementType().getNumComponents(),
 						targetAccessorModel.getComponentType(),
 						false,
@@ -340,20 +285,20 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 			} else {
 				GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, GltfMorphingPassConstants.getInstance().getGlZeroVec4Buffer());
 				GL20.glVertexAttribPointer(
-						GltfMorphingPassConstants.getInstance().getColorTarget(),
+						GltfMorphingPassConstants.getInstance().getColorTargetAttribute(),
 						4,
 						GL11.GL_FLOAT,
 						false,
 						0,
 						0);
 			}
-			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getColorTarget());
+			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getColorTargetAttribute());
 
 			targetAccessorModel = morphTarget.get("TEXCOORD_0");
 			if (targetAccessorModel != null) {
-				uploadAndBindArrayBuffer(targetAccessorModel.getBufferViewModel());
+				uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, targetAccessorModel.getBufferViewModel());
 				GL20.glVertexAttribPointer(
-						GltfMorphingPassConstants.getInstance().getTexcoordTarget(),
+						GltfMorphingPassConstants.getInstance().getTexcoordTargetAttribute(),
 						targetAccessorModel.getElementType().getNumComponents(),
 						targetAccessorModel.getComponentType(),
 						false,
@@ -362,68 +307,64 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 			} else {
 				GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, GltfMorphingPassConstants.getInstance().getGlZeroVec4Buffer());
 				GL20.glVertexAttribPointer(
-						GltfMorphingPassConstants.getInstance().getTexcoordTarget(),
+						GltfMorphingPassConstants.getInstance().getTexcoordTargetAttribute(),
 						2,
 						GL11.GL_FLOAT,
 						false,
 						0,
 						0);
 			}
-			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTexcoordTarget());
+			GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTexcoordTargetAttribute());
 		}
 
 		for (int c = 1; c < renderedMeshPrimitiveModel.morphing.attributeBundles.length; c++) {
 			DefaultRenderedMeshPrimitiveModel.Morphing.AttributeBundle bundle = renderedMeshPrimitiveModel.morphing.attributeBundles[c] = renderedMeshPrimitiveModel.morphing.new AttributeBundle();
-			int glMorphBuffer = GL15.glGenBuffers();
-			bundle.glMorphBuffer = glMorphBuffer;
-			glBuffers.add(glMorphBuffer);
-			GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, glMorphBuffer);
+
+			glBuffers.add(bundle.glMorphBuffer = GL15.glGenBuffers());
+			GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, bundle.glMorphBuffer);
 			GL15.glBufferData(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.morphing.morphBufferSize, GL15.GL_STATIC_DRAW);
-			int glOriginalAttributesVAO = GL30.glGenVertexArrays();
-			bundle.glOriginalAttributesVAO = glOriginalAttributesVAO;
-			glVertexArrays.add(glOriginalAttributesVAO);
-			GL30.glBindVertexArray(glOriginalAttributesVAO);
+
+			glVertexArrays.add(bundle.glBaseAttributesVAO = GL30.glGenVertexArrays());
+			GL30.glBindVertexArray(bundle.glBaseAttributesVAO);
 
 			colorsAccessorModel = attributes.get("COLOR_" + c);
 			if (colorsAccessorModel != null) {
-				uploadAndBindArrayBuffer(colorsAccessorModel.getBufferViewModel());
+				uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, colorsAccessorModel.getBufferViewModel());
 				GL20.glVertexAttribPointer(
-						GltfMorphingPassConstants.getInstance().getColorTarget(),
+						GltfMorphingPassConstants.getInstance().getColorTargetAttribute(),
 						colorsAccessorModel.getElementType().getNumComponents(),
 						colorsAccessorModel.getComponentType(),
 						false,
 						colorsAccessorModel.getByteStride(),
 						colorsAccessorModel.getByteOffset());
-				GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getColorTarget());
+				GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getColorTargetAttribute());
 			}
 
 			texcoordsAccessorModel = attributes.get("TEXCOORD_" + c);
 			if (texcoordsAccessorModel != null) {
-				uploadAndBindArrayBuffer(texcoordsAccessorModel.getBufferViewModel());
+				uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, texcoordsAccessorModel.getBufferViewModel());
 				GL20.glVertexAttribPointer(
-						GltfMorphingPassConstants.getInstance().getTexcoordTarget(),
+						GltfMorphingPassConstants.getInstance().getTexcoordTargetAttribute(),
 						texcoordsAccessorModel.getElementType().getNumComponents(),
 						texcoordsAccessorModel.getComponentType(),
 						false,
 						texcoordsAccessorModel.getByteStride(),
 						texcoordsAccessorModel.getByteOffset());
-				GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTexcoordTarget());
+				GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTexcoordTargetAttribute());
 			}
 
 			bundle.glMorphTargetVAOs = new int[morphTargets.size()];
 			for (int i = 0; i < morphTargets.size(); i++) {
 				Map<String, AccessorModel> morphTarget = morphTargets.get(i);
-				int glMorphTargetVAO = GL30.glGenVertexArrays();
-				bundle.glMorphTargetVAOs[i] = glMorphTargetVAO;
-				glVertexArrays.add(glMorphTargetVAO);
-				GL30.glBindVertexArray(glMorphTargetVAO);
+				glVertexArrays.add(bundle.glMorphTargetVAOs[i] = GL30.glGenVertexArrays());
+				GL30.glBindVertexArray(bundle.glMorphTargetVAOs[i]);
 
 				AccessorModel targetAccessorModel;
 				targetAccessorModel = morphTarget.get("COLOR_" + c);
 				if (targetAccessorModel != null) {
-					uploadAndBindArrayBuffer(targetAccessorModel.getBufferViewModel());
+					uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, targetAccessorModel.getBufferViewModel());
 					GL20.glVertexAttribPointer(
-							GltfMorphingPassConstants.getInstance().getColorTarget(),
+							GltfMorphingPassConstants.getInstance().getColorTargetAttribute(),
 							targetAccessorModel.getElementType().getNumComponents(),
 							targetAccessorModel.getComponentType(),
 							false,
@@ -432,20 +373,20 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 				} else {
 					GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, GltfMorphingPassConstants.getInstance().getGlZeroVec4Buffer());
 					GL20.glVertexAttribPointer(
-							GltfMorphingPassConstants.getInstance().getColorTarget(),
+							GltfMorphingPassConstants.getInstance().getColorTargetAttribute(),
 							4,
 							GL11.GL_FLOAT,
 							false,
 							0,
 							0);
 				}
-				GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getColorTarget());
+				GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getColorTargetAttribute());
 
 				targetAccessorModel = morphTarget.get("TEXCOORD_" + c);
 				if (targetAccessorModel != null) {
-					uploadAndBindArrayBuffer(targetAccessorModel.getBufferViewModel());
+					uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, targetAccessorModel.getBufferViewModel());
 					GL20.glVertexAttribPointer(
-							GltfMorphingPassConstants.getInstance().getTexcoordTarget(),
+							GltfMorphingPassConstants.getInstance().getTexcoordTargetAttribute(),
 							targetAccessorModel.getElementType().getNumComponents(),
 							targetAccessorModel.getComponentType(),
 							false,
@@ -454,295 +395,216 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 				} else {
 					GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, GltfMorphingPassConstants.getInstance().getGlZeroVec4Buffer());
 					GL20.glVertexAttribPointer(
-							GltfMorphingPassConstants.getInstance().getTexcoordTarget(),
+							GltfMorphingPassConstants.getInstance().getTexcoordTargetAttribute(),
 							2,
 							GL11.GL_FLOAT,
 							false,
 							0,
 							0);
 				}
-				GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTexcoordTarget());
+				GL20.glEnableVertexAttribArray(GltfMorphingPassConstants.getInstance().getTexcoordTargetAttribute());
 			}
 		}
 
-		int skinMatrixTargetSize = getSkinMatrixTargetSize();
-		if (skinMatrixTargetSize > 0) {
-			renderedMeshPrimitiveModel.skinning = renderedMeshPrimitiveModel.new Skinning();
-			renderedMeshPrimitiveModel.skinning.glSkinMatrixTargetVAOs = new int[skinMatrixTargetSize];
-			setupJointAndWeightAttribute();
-
-			int glVertexSrcVAO = GL30.glGenVertexArrays();
-			renderedMeshPrimitiveModel.skinning.glVertexSrcVAO = glVertexSrcVAO;
-			glVertexArrays.add(glVertexSrcVAO);
-			GL30.glBindVertexArray(glVertexSrcVAO);
-
-			renderedMeshPrimitiveModel.skinning.skinMatrixSize = (long) renderedMeshPrimitiveModel.count * Float.BYTES * ElementType.MAT4.getNumComponents();
-			setupSkinMatrixtAttribute();
-
-			int glMorphBuffer = GL15.glGenBuffers();
-			mainBundle.glMorphBuffer = glMorphBuffer;
-			glBuffers.add(glMorphBuffer);
-			GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, glMorphBuffer);
-			GL15.glBufferData(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.morphing.morphBufferSize, GL15.GL_STATIC_DRAW);
-
-			GL20.glVertexAttribPointer(
-					GltfApplySkinMatrixPassConstants.getInstance().getPositionIn(),
-					3,
-					GL11.GL_FLOAT,
-					false,
-					Float.BYTES * ElementType.MAT4.getNumComponents(),
-					(long) Float.BYTES * GltfMorphingPassConstants.getInstance().getMorphBufferPositionOffset());
-			GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getPositionIn());
-
-			GL20.glVertexAttribPointer(
-					GltfApplySkinMatrixPassConstants.getInstance().getNormalIn(),
-					3,
-					GL11.GL_FLOAT,
-					false,
-					Float.BYTES * ElementType.MAT4.getNumComponents(),
-					(long) Float.BYTES * GltfMorphingPassConstants.getInstance().getMorphBufferNormalOffset());
-			GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getNormalIn());
-
-			GL20.glVertexAttribPointer(
-					GltfApplySkinMatrixPassConstants.getInstance().getTangentIn(),
-					4,
-					GL11.GL_FLOAT,
-					false,
-					Float.BYTES * ElementType.MAT4.getNumComponents(),
-					(long) Float.BYTES * GltfMorphingPassConstants.getInstance().getMorphBufferTangentOffset());
-			GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getTangentIn());
-
-			GL30.glBindVertexArray(renderedMeshPrimitiveModel.glRenderVAO);
-
-			setupColorAttributeFromMorphing(); //Ensure color attribute can use glMorphBuffer directly.
-			setupRequiredAttributeFromSkinning();
-		} else {
-			renderedMeshPrimitiveModel.skinning = DefaultRenderedMeshPrimitiveModel.Skinning.DUMMY;
-
-			int glMorphBuffer = GL15.glGenBuffers();
-			mainBundle.glMorphBuffer = glMorphBuffer;
-			glBuffers.add(glMorphBuffer);
-			GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, glMorphBuffer);
-			GL15.glBufferData(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.morphing.morphBufferSize, GL15.GL_STATIC_DRAW);
-
-			GL30.glBindVertexArray(renderedMeshPrimitiveModel.glRenderVAO);
-
-			setupColorAttributeFromMorphing();
-			setupRequiredAttributeFromMorphing();
-		}
-		setupTexcoordAttributeFromMorphing();
+		//This ensures that current buffer binding is always bundle 0 at the end, so it can pass to setupRenderPassFromMorphing() or setupSkinningFromMorphing()
+		glBuffers.add(mainBundle.glMorphBuffer = GL15.glGenBuffers());
+		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, mainBundle.glMorphBuffer);
+		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.morphing.morphBufferSize, GL15.GL_STATIC_DRAW);
 	}
 
-	protected void setupRenderAlias() {
-		renderedMeshPrimitiveModel = new DefaultRenderedMeshPrimitiveModel();
-
-		AccessorModel indicesAccessorModel = meshPrimitiveModel.getIndices();
-		if (indicesAccessorModel != null) {
-			int indiceCount = indicesAccessorModel.getCount();
-			int mode = meshPrimitiveModel.getMode();
-			int type = indicesAccessorModel.getComponentType();
-			int offset = indicesAccessorModel.getByteOffset();
-			int glBuffer = glBufferLookup.get(indicesAccessorModel.getBufferViewModel());
-
-			DefaultRenderedMeshPrimitiveModel renderedMeshPrimitiveModel = this.renderedMeshPrimitiveModel;
-			renderedMeshPrimitiveModel.glDraw = () -> {
-				GL30.glBindVertexArray(renderedMeshPrimitiveModel.glRenderVAO);
-				GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, glBuffer);
-				GL11.glDrawElements(mode, indiceCount, type, offset);
-			};
-		} else {
-			int mode = meshPrimitiveModel.getMode();
-
-			DefaultRenderedMeshPrimitiveModel renderedMeshPrimitiveModel = this.renderedMeshPrimitiveModel;
-			renderedMeshPrimitiveModel.glDraw = () -> {
-				GL30.glBindVertexArray(renderedMeshPrimitiveModel.glRenderVAO);
-				GL11.glDrawArrays(mode, 0, renderedMeshPrimitiveModel.count);
-			};
-		}
-		renderedMeshPrimitiveModel.count = baseRenderedMeshPrimitiveModel.count;
-		int glRenderVAO = GL30.glGenVertexArrays();
-		renderedMeshPrimitiveModel.glRenderVAO = glRenderVAO;
-		glVertexArrays.add(glRenderVAO);
-	}
-
-	protected void setupMorphingSkinningAlias() {
-		renderedMeshPrimitiveModel.morphing = renderedMeshPrimitiveModel.new Morphing();
-		renderedMeshPrimitiveModel.morphing.morphBufferSize = baseRenderedMeshPrimitiveModel.morphing.morphBufferSize;
-		renderedMeshPrimitiveModel.morphing.attributeBundles = new DefaultRenderedMeshPrimitiveModel.Morphing.AttributeBundle[baseRenderedMeshPrimitiveModel.morphing.attributeBundles.length];
-
-		for (int c = 0; c < renderedMeshPrimitiveModel.morphing.attributeBundles.length; c++) {
-			DefaultRenderedMeshPrimitiveModel.Morphing.AttributeBundle baseBundle = baseRenderedMeshPrimitiveModel.morphing.attributeBundles[c];
-			DefaultRenderedMeshPrimitiveModel.Morphing.AttributeBundle bundle = renderedMeshPrimitiveModel.morphing.attributeBundles[c] = renderedMeshPrimitiveModel.morphing.new AttributeBundle();
-			int glMorphBuffer = GL15.glGenBuffers();
-			bundle.glMorphBuffer = glMorphBuffer;
-			glBuffers.add(glMorphBuffer);
-			GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, glMorphBuffer);
-			GL15.glBufferData(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.morphing.morphBufferSize, GL15.GL_STATIC_DRAW);
-			bundle.glOriginalAttributesVAO = baseBundle.glOriginalAttributesVAO;
-			bundle.glMorphTargetVAOs = baseBundle.glMorphTargetVAOs;
-		}
-
-		if (baseRenderedMeshPrimitiveModel.skinning != null) {
-			renderedMeshPrimitiveModel.skinning = renderedMeshPrimitiveModel.new Skinning();
-			renderedMeshPrimitiveModel.skinning.glSkinMatrixTargetVAOs = baseRenderedMeshPrimitiveModel.skinning.glSkinMatrixTargetVAOs;
-
-			int glVertexSrcVAO = GL30.glGenVertexArrays();
-			renderedMeshPrimitiveModel.skinning.glVertexSrcVAO = glVertexSrcVAO;
-			glVertexArrays.add(glVertexSrcVAO);
-			GL30.glBindVertexArray(glVertexSrcVAO);
-
-			renderedMeshPrimitiveModel.skinning.skinMatrixSize = baseRenderedMeshPrimitiveModel.skinning.skinMatrixSize;
-			setupSkinMatrixtAttribute();
-
-			GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.morphing.attributeBundles[0].glMorphBuffer);
-
-			GL20.glVertexAttribPointer(
-					GltfApplySkinMatrixPassConstants.getInstance().getPositionIn(),
-					3,
-					GL11.GL_FLOAT,
-					false,
-					Float.BYTES * ElementType.MAT4.getNumComponents(),
-					(long) Float.BYTES * GltfMorphingPassConstants.getInstance().getMorphBufferPositionOffset());
-			GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getPositionIn());
-
-			GL20.glVertexAttribPointer(
-					GltfApplySkinMatrixPassConstants.getInstance().getNormalIn(),
-					3,
-					GL11.GL_FLOAT,
-					false,
-					Float.BYTES * ElementType.MAT4.getNumComponents(),
-					(long) Float.BYTES * GltfMorphingPassConstants.getInstance().getMorphBufferNormalOffset());
-			GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getNormalIn());
-
-			GL20.glVertexAttribPointer(
-					GltfApplySkinMatrixPassConstants.getInstance().getTangentIn(),
-					4,
-					GL11.GL_FLOAT,
-					false,
-					Float.BYTES * ElementType.MAT4.getNumComponents(),
-					(long) Float.BYTES * GltfMorphingPassConstants.getInstance().getMorphBufferTangentOffset());
-			GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getTangentIn());
-
-			GL30.glBindVertexArray(renderedMeshPrimitiveModel.glRenderVAO);
-
-			setupColorAttributeFromMorphing(); //Ensure color attribute can use glMorphBuffer directly.
-			setupRequiredAttributeFromSkinning();
-		} else {
-			renderedMeshPrimitiveModel.skinning = DefaultRenderedMeshPrimitiveModel.Skinning.DUMMY;
-
-			GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.morphing.attributeBundles[0].glMorphBuffer);
-
-			GL30.glBindVertexArray(renderedMeshPrimitiveModel.glRenderVAO);
-
-			setupColorAttributeFromMorphing();
-			setupRequiredAttributeFromMorphing();
-		}
-		setupTexcoordAttributeFromMorphing();
-	}
-
-	protected void setupSkinningAlias() {
+	protected void setupSkinning() {
 		renderedMeshPrimitiveModel.skinning = renderedMeshPrimitiveModel.new Skinning();
-		renderedMeshPrimitiveModel.skinning.glSkinMatrixTargetVAOs = baseRenderedMeshPrimitiveModel.skinning.glSkinMatrixTargetVAOs;
+		renderedMeshPrimitiveModel.skinning.skinMatrixSize = (long) renderedMeshPrimitiveModel.count * GltfApplySkinMatrixPassConstants.getInstance().getSkinBufferStride();
+		renderedMeshPrimitiveModel.skinning.glSkinMatrixTargetVAOs = new int[skinMatrixTargetSize];
 
-		int glVertexSrcVAO = GL30.glGenVertexArrays();
-		renderedMeshPrimitiveModel.skinning.glVertexSrcVAO = glVertexSrcVAO;
-		glVertexArrays.add(glVertexSrcVAO);
-		GL30.glBindVertexArray(glVertexSrcVAO);
+		glVertexArrays.add(renderedMeshPrimitiveModel.skinning.glBaseAttributesVAO = GL30.glGenVertexArrays());
+		GL30.glBindVertexArray(renderedMeshPrimitiveModel.skinning.glBaseAttributesVAO);
 
-		renderedMeshPrimitiveModel.skinning.skinMatrixSize = baseRenderedMeshPrimitiveModel.skinning.skinMatrixSize;
-		setupSkinMatrixtAttribute();
-
-		positionsAccessorModel = attributes.get("POSITION");
-		uploadAndBindArrayBuffer(positionsAccessorModel.getBufferViewModel());
+		uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, positionsAccessorModel.getBufferViewModel());
 		GL20.glVertexAttribPointer(
-				GltfApplySkinMatrixPassConstants.getInstance().getPositionIn(),
+				GltfApplySkinMatrixPassConstants.getInstance().getPositionBaseAttribute(),
 				positionsAccessorModel.getElementType().getNumComponents(),
 				positionsAccessorModel.getComponentType(),
 				false,
 				positionsAccessorModel.getByteStride(),
 				positionsAccessorModel.getByteOffset());
-		GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getPositionIn());
+		GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getPositionBaseAttribute());
 
-		normalsAccessorModel = attributes.get("NORMAL");
-		uploadAndBindArrayBuffer(normalsAccessorModel.getBufferViewModel());
+		uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, normalsAccessorModel.getBufferViewModel());
 		GL20.glVertexAttribPointer(
-				GltfApplySkinMatrixPassConstants.getInstance().getNormalIn(),
+				GltfApplySkinMatrixPassConstants.getInstance().getNormalBaseAttribute(),
 				normalsAccessorModel.getElementType().getNumComponents(),
 				normalsAccessorModel.getComponentType(),
 				false,
 				normalsAccessorModel.getByteStride(),
 				normalsAccessorModel.getByteOffset());
-		GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getNormalIn());
+		GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getNormalBaseAttribute());
 
-		tangentsAccessorModel = attributes.get("TANGENT");
-		uploadAndBindArrayBuffer(tangentsAccessorModel.getBufferViewModel());
+		uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, tangentsAccessorModel.getBufferViewModel());
 		GL20.glVertexAttribPointer(
-				GltfApplySkinMatrixPassConstants.getInstance().getTangentIn(),
+				GltfApplySkinMatrixPassConstants.getInstance().getTangentBaseAttribute(),
 				tangentsAccessorModel.getElementType().getNumComponents(),
 				tangentsAccessorModel.getComponentType(),
 				false,
 				tangentsAccessorModel.getByteStride(),
 				tangentsAccessorModel.getByteOffset());
-		GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getTangentIn());
+		GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getTangentBaseAttribute());
 
-		GL30.glBindVertexArray(renderedMeshPrimitiveModel.glRenderVAO);
+		setupJointAndWeight();
 
-		setupRequiredAttributeFromSkinning();
-		setupColorAttribute();
-		setupTexcoordAttribute();
+		//This ensures that current buffer binding is always glSkinBuffer at the end, so it can pass to setupRenderPassFromSkinning()
+		glBuffers.add(renderedMeshPrimitiveModel.skinning.glSkinBuffer = GL15.glGenBuffers());
+		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.skinning.glSkinBuffer);
+		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.skinning.skinMatrixSize, GL15.GL_STATIC_DRAW);
 	}
 
-	protected void setupJointAndWeightAttribute() {
+	protected void setupSkinningFromMorphing() {
+		renderedMeshPrimitiveModel.skinning = renderedMeshPrimitiveModel.new Skinning();
+		renderedMeshPrimitiveModel.skinning.skinMatrixSize = (long) renderedMeshPrimitiveModel.count * GltfApplySkinMatrixPassConstants.getInstance().getSkinBufferStride();
+		renderedMeshPrimitiveModel.skinning.glSkinMatrixTargetVAOs = new int[skinMatrixTargetSize];
+
+		glVertexArrays.add(renderedMeshPrimitiveModel.skinning.glBaseAttributesVAO = GL30.glGenVertexArrays());
+		GL30.glBindVertexArray(renderedMeshPrimitiveModel.skinning.glBaseAttributesVAO);
+
+		GL20.glVertexAttribPointer(
+				GltfApplySkinMatrixPassConstants.getInstance().getPositionBaseAttribute(),
+				3,
+				GL11.GL_FLOAT,
+				false,
+				GltfMorphingPassConstants.getInstance().getMorphBufferStride(),
+				GltfMorphingPassConstants.getInstance().getMorphBufferPositionOffset());
+		GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getPositionBaseAttribute());
+
+		GL20.glVertexAttribPointer(
+				GltfApplySkinMatrixPassConstants.getInstance().getNormalBaseAttribute(),
+				3,
+				GL11.GL_FLOAT,
+				false,
+				GltfMorphingPassConstants.getInstance().getMorphBufferStride(),
+				GltfMorphingPassConstants.getInstance().getMorphBufferNormalOffset());
+		GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getNormalBaseAttribute());
+
+		GL20.glVertexAttribPointer(
+				GltfApplySkinMatrixPassConstants.getInstance().getTangentBaseAttribute(),
+				4,
+				GL11.GL_FLOAT,
+				false,
+				GltfMorphingPassConstants.getInstance().getMorphBufferStride(),
+				GltfMorphingPassConstants.getInstance().getMorphBufferTangentOffset());
+		GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getTangentBaseAttribute());
+
+		setupJointAndWeight();
+
+		//This ensures that current buffer binding is always glSkinBuffer at the end, so it can pass to setupRenderPassFromSkinning()
+		glBuffers.add(renderedMeshPrimitiveModel.skinning.glSkinBuffer = GL15.glGenBuffers());
+		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.skinning.glSkinBuffer);
+		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.skinning.skinMatrixSize, GL15.GL_STATIC_DRAW);
+	}
+
+	protected void setupMorphingAlias() {
+		renderedMeshPrimitiveModel.morphing = renderedMeshPrimitiveModel.new Morphing();
+		renderedMeshPrimitiveModel.morphing.morphBufferSize = baseRenderedMeshPrimitiveModel.morphing.morphBufferSize;
+		renderedMeshPrimitiveModel.morphing.attributeBundles = new DefaultRenderedMeshPrimitiveModel.Morphing.AttributeBundle[baseRenderedMeshPrimitiveModel.morphing.attributeBundles.length];
+
+		//This ensures that current buffer binding is always bundle 0 at the end, so it can pass to setupRenderPassFromMorphing()
+		for (int i = renderedMeshPrimitiveModel.morphing.attributeBundles.length - 1; i >= 0; i--) {
+			DefaultRenderedMeshPrimitiveModel.Morphing.AttributeBundle baseBundle = baseRenderedMeshPrimitiveModel.morphing.attributeBundles[i];
+			DefaultRenderedMeshPrimitiveModel.Morphing.AttributeBundle bundle = renderedMeshPrimitiveModel.morphing.attributeBundles[i] = renderedMeshPrimitiveModel.morphing.new AttributeBundle();
+			bundle.glBaseAttributesVAO = baseBundle.glBaseAttributesVAO;
+			bundle.glMorphTargetVAOs = baseBundle.glMorphTargetVAOs;
+
+			glBuffers.add(bundle.glMorphBuffer = GL15.glGenBuffers());
+			GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, bundle.glMorphBuffer);
+			GL15.glBufferData(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.morphing.morphBufferSize, GL15.GL_STATIC_DRAW);
+		}
+	}
+
+	protected void setupSkinningAlias() {
+		renderedMeshPrimitiveModel.skinning = renderedMeshPrimitiveModel.new Skinning();
+		renderedMeshPrimitiveModel.skinning.skinMatrixSize = baseRenderedMeshPrimitiveModel.skinning.skinMatrixSize;
+		renderedMeshPrimitiveModel.skinning.glBaseAttributesVAO = baseRenderedMeshPrimitiveModel.skinning.glBaseAttributesVAO;
+		renderedMeshPrimitiveModel.skinning.glSkinMatrixTargetVAOs = baseRenderedMeshPrimitiveModel.skinning.glSkinMatrixTargetVAOs;
+
+		glBuffers.add(renderedMeshPrimitiveModel.skinning.glSkinBuffer = GL15.glGenBuffers());
+		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.skinning.glSkinBuffer);
+		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.skinning.skinMatrixSize, GL15.GL_STATIC_DRAW);
+	}
+
+	protected void setupSkinningFromMorphingAlias() {
+		renderedMeshPrimitiveModel.skinning = renderedMeshPrimitiveModel.new Skinning();
+		renderedMeshPrimitiveModel.skinning.skinMatrixSize = baseRenderedMeshPrimitiveModel.skinning.skinMatrixSize;
+		renderedMeshPrimitiveModel.skinning.glSkinMatrixTargetVAOs = baseRenderedMeshPrimitiveModel.skinning.glSkinMatrixTargetVAOs;
+
+		glVertexArrays.add(renderedMeshPrimitiveModel.skinning.glBaseAttributesVAO = GL30.glGenVertexArrays());
+		GL30.glBindVertexArray(renderedMeshPrimitiveModel.skinning.glBaseAttributesVAO);
+
+		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.morphing.attributeBundles[0].glMorphBuffer);
+
+		GL20.glVertexAttribPointer(
+				GltfApplySkinMatrixPassConstants.getInstance().getPositionBaseAttribute(),
+				3,
+				GL11.GL_FLOAT,
+				false,
+				GltfMorphingPassConstants.getInstance().getMorphBufferStride(),
+				GltfMorphingPassConstants.getInstance().getMorphBufferPositionOffset());
+		GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getPositionBaseAttribute());
+
+		GL20.glVertexAttribPointer(
+				GltfApplySkinMatrixPassConstants.getInstance().getNormalBaseAttribute(),
+				3,
+				GL11.GL_FLOAT,
+				false,
+				GltfMorphingPassConstants.getInstance().getMorphBufferStride(),
+				GltfMorphingPassConstants.getInstance().getMorphBufferNormalOffset());
+		GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getNormalBaseAttribute());
+
+		GL20.glVertexAttribPointer(
+				GltfApplySkinMatrixPassConstants.getInstance().getTangentBaseAttribute(),
+				4,
+				GL11.GL_FLOAT,
+				false,
+				GltfMorphingPassConstants.getInstance().getMorphBufferStride(),
+				GltfMorphingPassConstants.getInstance().getMorphBufferTangentOffset());
+		GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getTangentBaseAttribute());
+
+		glBuffers.add(renderedMeshPrimitiveModel.skinning.glSkinBuffer = GL15.glGenBuffers());
+		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.skinning.glSkinBuffer);
+		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.skinning.skinMatrixSize, GL15.GL_STATIC_DRAW);
+	}
+
+	protected void setupJointAndWeight() {
 		for (int i = 0; i < renderedMeshPrimitiveModel.skinning.glSkinMatrixTargetVAOs.length; i++) {
-			int glSkinMatrixTargetVAO = GL30.glGenVertexArrays();
-			renderedMeshPrimitiveModel.skinning.glSkinMatrixTargetVAOs[i] = glSkinMatrixTargetVAO;
-			glVertexArrays.add(glSkinMatrixTargetVAO);
-			GL30.glBindVertexArray(glSkinMatrixTargetVAO);
+			glVertexArrays.add(renderedMeshPrimitiveModel.skinning.glSkinMatrixTargetVAOs[i] = GL30.glGenVertexArrays());
+			GL30.glBindVertexArray(renderedMeshPrimitiveModel.skinning.glSkinMatrixTargetVAOs[i]);
 
 			AccessorModel jointsAccessorModel = attributes.get("JOINTS_" + i);
-			uploadAndBindArrayBuffer(jointsAccessorModel.getBufferViewModel());
+			uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, jointsAccessorModel.getBufferViewModel());
 			GL20.glVertexAttribPointer(
-					GltfCalcSkinMatrixPassConstants.getInstance().getJointIn(),
+					GltfCalcSkinMatrixPassConstants.getInstance().getJointAttribute(),
 					jointsAccessorModel.getElementType().getNumComponents(),
 					jointsAccessorModel.getComponentType(),
 					false,
 					jointsAccessorModel.getByteStride(),
 					jointsAccessorModel.getByteOffset());
-			GL20.glEnableVertexAttribArray(GltfCalcSkinMatrixPassConstants.getInstance().getJointIn());
+			GL20.glEnableVertexAttribArray(GltfCalcSkinMatrixPassConstants.getInstance().getJointAttribute());
 
 			AccessorModel weightsAccessorModel = attributes.get("WEIGHTS_" + i);
-			uploadAndBindArrayBuffer(weightsAccessorModel.getBufferViewModel());
+			uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, weightsAccessorModel.getBufferViewModel());
 			GL20.glVertexAttribPointer(
-					GltfCalcSkinMatrixPassConstants.getInstance().getWeightIn(),
+					GltfCalcSkinMatrixPassConstants.getInstance().getWeightAttribute(),
 					weightsAccessorModel.getElementType().getNumComponents(),
 					weightsAccessorModel.getComponentType(),
 					false,
 					weightsAccessorModel.getByteStride(),
 					weightsAccessorModel.getByteOffset());
-			GL20.glEnableVertexAttribArray(GltfCalcSkinMatrixPassConstants.getInstance().getWeightIn());
+			GL20.glEnableVertexAttribArray(GltfCalcSkinMatrixPassConstants.getInstance().getWeightAttribute());
 		}
 	}
 
-	protected void setupSkinMatrixtAttribute() {
-		int glSkinMatrixBuffer = GL15.glGenBuffers();
-		renderedMeshPrimitiveModel.skinning.glSkinMatrixBuffer = glSkinMatrixBuffer;
-		glBuffers.add(glSkinMatrixBuffer);
-		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.skinning.glSkinMatrixBuffer);
-		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.skinning.skinMatrixSize, GL15.GL_STATIC_DRAW);
-		for (int i = 0; i < 4; i++) {
-			GL20.glVertexAttribPointer(
-					GltfApplySkinMatrixPassConstants.getInstance().getSkinMatrixIn() + i,
-					4,
-					GL11.GL_FLOAT,
-					false,
-					Float.BYTES * ElementType.MAT4.getNumComponents(),
-					(long) Float.BYTES * ElementType.VEC4.getNumComponents() * i);
-			GL20.glEnableVertexAttribArray(GltfApplySkinMatrixPassConstants.getInstance().getSkinMatrixIn() + i);
-		}
-	}
+	protected void setupRenderPass() {
+		GL30.glBindVertexArray(renderedMeshPrimitiveModel.glRenderVAO);
 
-	protected void setupRequiredAttribute() {
-		uploadAndBindArrayBuffer(positionsAccessorModel.getBufferViewModel());
+		uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, positionsAccessorModel.getBufferViewModel());
 		GL11.glVertexPointer(
 				positionsAccessorModel.getElementType().getNumComponents(),
 				positionsAccessorModel.getComponentType(),
@@ -750,58 +612,105 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 				positionsAccessorModel.getByteOffset());
 		GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
 
-		uploadAndBindArrayBuffer(normalsAccessorModel.getBufferViewModel());
+		uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, normalsAccessorModel.getBufferViewModel());
 		GL11.glNormalPointer(
 				normalsAccessorModel.getComponentType(),
 				normalsAccessorModel.getByteStride(),
 				normalsAccessorModel.getByteOffset());
 		GL11.glEnableClientState(GL11.GL_NORMAL_ARRAY);
+
+		setupColorAttribute();
+		setupTexcoordAttribute();
+
+		setupGlDraw();
 	}
 
-	protected void setupRequiredAttributeFromMorphing() {
-		GL11.glVertexPointer(
-				3,
-				GL11.GL_FLOAT,
-				Float.BYTES * ElementType.MAT4.getNumComponents(),
-				(long) Float.BYTES * GltfMorphingPassConstants.getInstance().getMorphBufferPositionOffset());
-		GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
-
-		GL11.glNormalPointer(
-				GL11.GL_FLOAT,
-				Float.BYTES * ElementType.MAT4.getNumComponents(),
-				(long) Float.BYTES * GltfMorphingPassConstants.getInstance().getMorphBufferNormalOffset());
-		GL11.glEnableClientState(GL11.GL_NORMAL_ARRAY);
-	}
-
-	protected void setupRequiredAttributeFromSkinning() {
-		renderedMeshPrimitiveModel.skinning.glAttributesBuffer = GL15.glGenBuffers();
-		glBuffers.add(renderedMeshPrimitiveModel.skinning.glAttributesBuffer);
-		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, renderedMeshPrimitiveModel.skinning.glAttributesBuffer);
-		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, (long) renderedMeshPrimitiveModel.count * Float.BYTES * ElementType.VEC4.getNumComponents() * 3, GL15.GL_STATIC_DRAW);
+	protected void setupRenderPassFromMorphing() {
+		GL30.glBindVertexArray(renderedMeshPrimitiveModel.glRenderVAO);
 
 		GL11.glVertexPointer(
 				3,
 				GL11.GL_FLOAT,
-				Float.BYTES * ElementType.VEC4.getNumComponents() * 3,
-				0);
+				GltfMorphingPassConstants.getInstance().getMorphBufferStride(),
+				GltfMorphingPassConstants.getInstance().getMorphBufferPositionOffset());
 		GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
 
 		GL11.glNormalPointer(
 				GL11.GL_FLOAT,
-				Float.BYTES * ElementType.VEC4.getNumComponents() * 3,
-				(long) Float.BYTES * ElementType.VEC4.getNumComponents());
+				GltfMorphingPassConstants.getInstance().getMorphBufferStride(),
+				GltfMorphingPassConstants.getInstance().getMorphBufferNormalOffset());
 		GL11.glEnableClientState(GL11.GL_NORMAL_ARRAY);
+
+		setupColorAttributeFromMorphing();
+		setupTexcoordAttributeFromMorphing();
+
+		setupGlDraw();
+	}
+
+	protected void setupRenderPassFromSkinning() {
+		GL30.glBindVertexArray(renderedMeshPrimitiveModel.glRenderVAO);
+
+		GL11.glVertexPointer(
+				3,
+				GL11.GL_FLOAT,
+				GltfApplySkinMatrixPassConstants.getInstance().getSkinBufferStride(),
+				GltfApplySkinMatrixPassConstants.getInstance().getSkinBufferPositionOffset());
+		GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
+
+		GL11.glNormalPointer(
+				GL11.GL_FLOAT,
+				GltfApplySkinMatrixPassConstants.getInstance().getSkinBufferStride(),
+				GltfApplySkinMatrixPassConstants.getInstance().getSkinBufferNormalOffset());
+		GL11.glEnableClientState(GL11.GL_NORMAL_ARRAY);
+
+		setupColorAttribute();
+		setupTexcoordAttribute();
+
+		setupGlDraw();
+	}
+
+	protected void setupRenderPassFromMorphingAndSkinning() {
+		GL30.glBindVertexArray(renderedMeshPrimitiveModel.glRenderVAO);
+
+		GL11.glVertexPointer(
+				3,
+				GL11.GL_FLOAT,
+				GltfApplySkinMatrixPassConstants.getInstance().getSkinBufferStride(),
+				GltfApplySkinMatrixPassConstants.getInstance().getSkinBufferPositionOffset());
+		GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
+
+		GL11.glNormalPointer(
+				GL11.GL_FLOAT,
+				GltfApplySkinMatrixPassConstants.getInstance().getSkinBufferStride(),
+				GltfApplySkinMatrixPassConstants.getInstance().getSkinBufferNormalOffset());
+		GL11.glEnableClientState(GL11.GL_NORMAL_ARRAY);
+
+		setupColorAttributeFromMorphing();
+		setupTexcoordAttributeFromMorphing();
+
+		setupGlDraw();
 	}
 
 	protected void setupColorAttribute() {
 		AccessorModel colorsAccessorModel = attributes.get("COLOR_0");
 		if (colorsAccessorModel != null) {
-			uploadAndBindArrayBuffer(colorsAccessorModel.getBufferViewModel());
+			uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, colorsAccessorModel.getBufferViewModel());
 			GL11.glColorPointer(
 					colorsAccessorModel.getElementType().getNumComponents(),
 					colorsAccessorModel.getComponentType(),
 					colorsAccessorModel.getByteStride(),
 					colorsAccessorModel.getByteOffset());
+			GL11.glEnableClientState(GL11.GL_COLOR_ARRAY);
+		}
+	}
+
+	protected void setupColorAttributeFromMorphing() {
+		if (attributes.get("COLOR_0") != null) {
+			GL11.glColorPointer(
+					4,
+					GL11.GL_FLOAT,
+					GltfMorphingPassConstants.getInstance().getMorphBufferStride(),
+					GltfMorphingPassConstants.getInstance().getMorphBufferColorOffset());
 			GL11.glEnableClientState(GL11.GL_COLOR_ARRAY);
 		}
 	}
@@ -816,7 +725,7 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 				Integer baseColorTexcoord = materialModelV2.getBaseColorTexcoord();
 				if (baseColorTexcoord != null) texcoordsAccessorModel = attributes.get("TEXCOORD_" + baseColorTexcoord);
 				else texcoordsAccessorModel = accessorModel;
-				uploadAndBindArrayBuffer(texcoordsAccessorModel.getBufferViewModel());
+				uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, texcoordsAccessorModel.getBufferViewModel());
 				GL13.glClientActiveTexture(VanillaRenderConstants.getInstance().getColorTextureIndex());
 				GL11.glTexCoordPointer(
 						texcoordsAccessorModel.getElementType().getNumComponents(),
@@ -828,7 +737,7 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 				Integer emissiveTexcoord = materialModelV2.getEmissiveTexcoord();
 				if (emissiveTexcoord != null) texcoordsAccessorModel = attributes.get("TEXCOORD_" + emissiveTexcoord);
 				else texcoordsAccessorModel = accessorModel;
-				uploadAndBindArrayBuffer(texcoordsAccessorModel.getBufferViewModel());
+				uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, texcoordsAccessorModel.getBufferViewModel());
 				GL13.glClientActiveTexture(VanillaRenderConstants.getInstance().getEmissiveTextureIndex());
 				GL11.glTexCoordPointer(
 						texcoordsAccessorModel.getElementType().getNumComponents(),
@@ -840,7 +749,7 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 				Integer baseColorTexcoord = materialModelV2.getBaseColorTexcoord();
 				if (baseColorTexcoord != null) {
 					AccessorModel texcoordsAccessorModel = attributes.get("TEXCOORD_" + baseColorTexcoord);
-					uploadAndBindArrayBuffer(texcoordsAccessorModel.getBufferViewModel());
+					uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, texcoordsAccessorModel.getBufferViewModel());
 					GL13.glClientActiveTexture(VanillaRenderConstants.getInstance().getColorTextureIndex());
 					GL11.glTexCoordPointer(
 							texcoordsAccessorModel.getElementType().getNumComponents(),
@@ -853,7 +762,7 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 				Integer emissiveTexcoord = materialModelV2.getEmissiveTexcoord();
 				if (emissiveTexcoord != null) {
 					AccessorModel texcoordsAccessorModel = attributes.get("TEXCOORD_" + emissiveTexcoord);
-					uploadAndBindArrayBuffer(texcoordsAccessorModel.getBufferViewModel());
+					uploadAndBindBuffer(GL15.GL_ARRAY_BUFFER, texcoordsAccessorModel.getBufferViewModel());
 					GL13.glClientActiveTexture(VanillaRenderConstants.getInstance().getEmissiveTextureIndex());
 					GL11.glTexCoordPointer(
 							texcoordsAccessorModel.getElementType().getNumComponents(),
@@ -863,17 +772,6 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 					GL11.glEnableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
 				}
 			}
-		}
-	}
-
-	protected void setupColorAttributeFromMorphing() {
-		if (attributes.get("COLOR_0") != null) {
-			GL11.glColorPointer(
-					4,
-					GL11.GL_FLOAT,
-					Float.BYTES * ElementType.MAT4.getNumComponents(),
-					(long) Float.BYTES * GltfMorphingPassConstants.getInstance().getMorphBufferColorOffset());
-			GL11.glEnableClientState(GL11.GL_COLOR_ARRAY);
 		}
 	}
 
@@ -888,8 +786,8 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 				GL11.glTexCoordPointer(
 						2,
 						GL11.GL_FLOAT,
-						Float.BYTES * ElementType.MAT4.getNumComponents(),
-						(long) Float.BYTES * GltfMorphingPassConstants.getInstance().getMorphBufferTexcoordOffset());
+						GltfMorphingPassConstants.getInstance().getMorphBufferStride(),
+						GltfMorphingPassConstants.getInstance().getMorphBufferTexcoordOffset());
 				GL11.glEnableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
 				Integer emissiveTexcoord = materialModelV2.getEmissiveTexcoord();
 				if (emissiveTexcoord == null) emissiveTexcoord = 0;
@@ -898,8 +796,8 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 				GL11.glTexCoordPointer(
 						2,
 						GL11.GL_FLOAT,
-						Float.BYTES * ElementType.MAT4.getNumComponents(),
-						(long) Float.BYTES * GltfMorphingPassConstants.getInstance().getMorphBufferTexcoordOffset());
+						GltfMorphingPassConstants.getInstance().getMorphBufferStride(),
+						GltfMorphingPassConstants.getInstance().getMorphBufferTexcoordOffset());
 				GL11.glEnableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
 			} else {
 				Integer baseColorTexcoord = materialModelV2.getBaseColorTexcoord();
@@ -909,8 +807,8 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 					GL11.glTexCoordPointer(
 							2,
 							GL11.GL_FLOAT,
-							Float.BYTES * ElementType.MAT4.getNumComponents(),
-							(long) Float.BYTES * GltfMorphingPassConstants.getInstance().getMorphBufferTexcoordOffset());
+							GltfMorphingPassConstants.getInstance().getMorphBufferStride(),
+							GltfMorphingPassConstants.getInstance().getMorphBufferTexcoordOffset());
 					GL11.glEnableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
 				}
 				Integer emissiveTexcoord = materialModelV2.getEmissiveTexcoord();
@@ -920,11 +818,36 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 					GL11.glTexCoordPointer(
 							2,
 							GL11.GL_FLOAT,
-							Float.BYTES * ElementType.MAT4.getNumComponents(),
-							(long) Float.BYTES * GltfMorphingPassConstants.getInstance().getMorphBufferTexcoordOffset());
+							GltfMorphingPassConstants.getInstance().getMorphBufferStride(),
+							GltfMorphingPassConstants.getInstance().getMorphBufferTexcoordOffset());
 					GL11.glEnableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
 				}
 			}
+		}
+	}
+
+	protected void setupGlDraw() {
+		AccessorModel indicesAccessorModel = meshPrimitiveModel.getIndices();
+		if (indicesAccessorModel != null) {
+			int indiceCount = indicesAccessorModel.getCount();
+			int mode = meshPrimitiveModel.getMode();
+			int type = indicesAccessorModel.getComponentType();
+			int offset = indicesAccessorModel.getByteOffset();
+			uploadAndBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, indicesAccessorModel.getBufferViewModel());
+
+			DefaultRenderedMeshPrimitiveModel renderedMeshPrimitiveModel = this.renderedMeshPrimitiveModel;
+			renderedMeshPrimitiveModel.glDraw = () -> {
+				GL30.glBindVertexArray(renderedMeshPrimitiveModel.glRenderVAO);
+				GL11.glDrawElements(mode, indiceCount, type, offset);
+			};
+		} else {
+			int mode = meshPrimitiveModel.getMode();
+
+			DefaultRenderedMeshPrimitiveModel renderedMeshPrimitiveModel = this.renderedMeshPrimitiveModel;
+			renderedMeshPrimitiveModel.glDraw = () -> {
+				GL30.glBindVertexArray(renderedMeshPrimitiveModel.glRenderVAO);
+				GL11.glDrawArrays(mode, 0, renderedMeshPrimitiveModel.count);
+			};
 		}
 	}
 
@@ -947,27 +870,14 @@ public class DefaultRenderedMeshPrimitiveModelCreator {
 		return size + 1;
 	}
 
-	protected int uploadAndBindArrayBuffer(BufferViewModel bufferViewModel) {
+	protected int uploadAndBindBuffer(int target, BufferViewModel bufferViewModel) {
 		Integer glBuffer = glBufferLookup.get(bufferViewModel);
 		if (glBuffer == null) {
-			glBuffer = GL15.glGenBuffers();
-			glBuffers.add(glBuffer);
-			GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, glBuffer);
-			GL15.glBufferData(GL15.GL_ARRAY_BUFFER, bufferViewModel.getBufferViewData(), GL15.GL_STATIC_DRAW);
+			glBuffers.add(glBuffer = GL15.glGenBuffers());
+			GL15.glBindBuffer(target, glBuffer);
+			GL15.glBufferData(target, bufferViewModel.getBufferViewData(), GL15.GL_STATIC_DRAW);
 			glBufferLookup.put(bufferViewModel, glBuffer);
-		} else GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, glBuffer);
-		return glBuffer;
-	}
-
-	protected int uploadAndObtainElementArrayBuffer(BufferViewModel bufferViewModel) {
-		Integer glBuffer = glBufferLookup.get(bufferViewModel);
-		if (glBuffer == null) {
-			glBuffer = GL15.glGenBuffers();
-			glBuffers.add(glBuffer);
-			GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, glBuffer);
-			GL15.glBufferData(GL15.GL_ELEMENT_ARRAY_BUFFER, bufferViewModel.getBufferViewData(), GL15.GL_STATIC_DRAW);
-			glBufferLookup.put(bufferViewModel, glBuffer);
-		}
+		} else GL15.glBindBuffer(target, glBuffer);
 		return glBuffer;
 	}
 }

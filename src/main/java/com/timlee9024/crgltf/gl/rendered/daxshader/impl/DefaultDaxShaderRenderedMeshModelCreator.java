@@ -12,7 +12,7 @@ import java.util.List;
 public class DefaultDaxShaderRenderedMeshModelCreator extends DefaultRenderedMeshModelCreator {
 
 	@Override
-	public DefaultRenderedMeshModel create(MeshModel meshModel) {
+	public DefaultDaxShaderRenderedMeshModel create(MeshModel meshModel) {
 		List<MeshPrimitiveModel> meshPrimitiveModels = meshModel.getMeshPrimitiveModels();
 		DefaultDaxShaderRenderedMeshPrimitiveModel[] renderedMeshPrimitiveModels = new DefaultDaxShaderRenderedMeshPrimitiveModel[meshPrimitiveModels.size()];
 		for (int i = 0; i < renderedMeshPrimitiveModels.length; i++) {

@@ -84,7 +84,7 @@ public class DefaultRenderedNodeModel extends CommonNodeAccessor {
 				}
 			}
 
-			GL20.glUniform1f(GltfMorphingPassConstants.getInstance().getWeight(), 1);
+			GL20.glUniform1f(GltfMorphingPassConstants.getInstance().getWeightUniform(), 1);
 			for (DefaultRenderedMeshModel renderedMeshModel : renderedMeshModels) {
 				for (DefaultRenderedMeshPrimitiveModel renderedMeshPrimitiveModel : renderedMeshModel.renderedMeshPrimitiveModels) {
 					renderedMeshPrimitiveModel.morphing.restoreAttributesForMorphing();
@@ -95,7 +95,7 @@ public class DefaultRenderedNodeModel extends CommonNodeAccessor {
 					float weight = weights[i];
 					if (weight != 0) {
 						GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
-						GL20.glUniform1f(GltfMorphingPassConstants.getInstance().getWeight(), weight);
+						GL20.glUniform1f(GltfMorphingPassConstants.getInstance().getWeightUniform(), weight);
 						for (DefaultRenderedMeshModel renderedMeshModel : renderedMeshModels) {
 							for (DefaultRenderedMeshPrimitiveModel renderedMeshPrimitiveModel : renderedMeshModel.renderedMeshPrimitiveModels) {
 								renderedMeshPrimitiveModel.morphing.applyMorphTarget(i);

@@ -24,18 +24,18 @@ public class GltfCalcSkinMatrixPassConstants {
 	protected int createGlProgram() {
 		int glShader = GL20.glCreateShader(GL20.GL_VERTEX_SHADER);
 		GL20.glShaderSource(glShader,
-				"#version 430\r\n"
-						+ "layout(location = " + getJointIn() + ") in vec4 joint;"
-						+ "layout(location = " + getWeightIn() + ") in vec4 weight;"
-						+ "layout(std430, binding = " + getJointMatrices() + ") restrict readonly buffer jointMatrixBuffer {mat4 jointMatrices[];};"
-						+ "layout(std430, binding = " + getSkinMatrices() + ") restrict buffer skinMatrixBuffer {mat4 skinMatrices[];};"
-						+ "void main() {"
-						+ "skinMatrices[gl_VertexID] +="
-						+ " weight.x * jointMatrices[int(joint.x)] +"
-						+ " weight.y * jointMatrices[int(joint.y)] +"
-						+ " weight.z * jointMatrices[int(joint.z)] +"
-						+ " weight.w * jointMatrices[int(joint.w)];"
-						+ "}");
+		"#version 430\r\n"
+			+ "layout(location = " + getJointAttribute() + ") in vec4 joint;"
+			+ "layout(location = " + getWeightAttribute() + ") in vec4 weight;"
+			+ "layout(std430, binding = " + getJointMatrixBufferBinding() + ") restrict readonly buffer jointMatrixBuffer {mat4 jointMatrices[];};"
+			+ "layout(std430, binding = " + getSkinBufferBinding() + ") restrict buffer skinBuffer {mat4 skinMatrices[];};"
+			+ "void main() {"
+			+ "skinMatrices[gl_VertexID] +="
+			+ " weight.x * jointMatrices[int(joint.x)] +"
+			+ " weight.y * jointMatrices[int(joint.y)] +"
+			+ " weight.z * jointMatrices[int(joint.z)] +"
+			+ " weight.w * jointMatrices[int(joint.w)];"
+			+ "}");
 		GL20.glCompileShader(glShader);
 
 		int glProgram = GL20.glCreateProgram();
@@ -50,19 +50,19 @@ public class GltfCalcSkinMatrixPassConstants {
 		return glProgram;
 	}
 
-	public int getJointIn() {
+	public int getJointAttribute() {
 		return 0;
 	}
 
-	public int getWeightIn() {
+	public int getWeightAttribute() {
 		return 1;
 	}
 
-	public int getJointMatrices() {
+	public int getJointMatrixBufferBinding() {
 		return 0;
 	}
 
-	public int getSkinMatrices() {
+	public int getSkinBufferBinding() {
 		return 1;
 	}
 

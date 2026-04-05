@@ -1,7 +1,6 @@
 package com.timlee9024.crgltf.gl.rendered.daxshader.impl;
 
 import com.timlee9024.crgltf.gl.rendered.impl.GL21RenderedMeshModel;
-import com.timlee9024.crgltf.gl.rendered.impl.GL21RenderedNodeModel;
 import com.timlee9024.crgltf.gl.rendered.impl.GL21RenderedNodeModelCreator;
 import de.javagl.jgltf.model.MeshModel;
 import de.javagl.jgltf.model.NodeModel;
@@ -11,7 +10,7 @@ import java.util.List;
 public class GL21DaxShaderRenderedNodeModelCreator extends GL21RenderedNodeModelCreator {
 
 	@Override
-	public GL21RenderedNodeModel create(NodeModel nodeModel) {
+	public GL21DaxShaderRenderedNodeModel create(NodeModel nodeModel) {
 		List<MeshModel> meshModels = nodeModel.getMeshModels();
 		int meshModelCount = meshModels.size();
 		if (meshModelCount == 0) return null;

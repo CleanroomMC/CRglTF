@@ -24,12 +24,12 @@ public class GltfCalcJointMatrixPassConstants {
 	protected int createGlProgram() {
 		int glShader = GL20.glCreateShader(GL20.GL_VERTEX_SHADER);
 		GL20.glShaderSource(glShader,
-				"#version 430\r\n"
-						+ "layout(location = " + getInverseBindMatrixIn() + ") in mat4 inverseBindMatrix;"
-						+ "layout(std430, binding = " + getJointMatrices() + ") restrict buffer jointMatrixBuffer {mat4 jointMatrices[];};"
-						+ "void main() {"
-						+ "jointMatrices[gl_VertexID] = jointMatrices[gl_VertexID] * inverseBindMatrix;"
-						+ "}");
+		"#version 430\r\n"
+			+ "layout(location = " + getInverseBindMatrixAttribute() + ") in mat4 inverseBindMatrix;"
+			+ "layout(std430, binding = " + getJointMatrixBufferBinding() + ") restrict buffer jointMatrixBuffer {mat4 jointMatrices[];};"
+			+ "void main() {"
+			+ "jointMatrices[gl_VertexID] = jointMatrices[gl_VertexID] * inverseBindMatrix;"
+			+ "}");
 		GL20.glCompileShader(glShader);
 
 		int glProgram = GL20.glCreateProgram();
@@ -44,11 +44,11 @@ public class GltfCalcJointMatrixPassConstants {
 		return glProgram;
 	}
 
-	public int getInverseBindMatrixIn() {
+	public int getInverseBindMatrixAttribute() {
 		return 0;
 	}
 
-	public int getJointMatrices() {
+	public int getJointMatrixBufferBinding() {
 		return 0;
 	}
 

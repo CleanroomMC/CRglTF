@@ -32,25 +32,25 @@ public class GltfMorphingPassConstants {
 	protected int createGlProgram() {
 		int glShader = GL20.glCreateShader(GL20.GL_VERTEX_SHADER);
 		GL20.glShaderSource(glShader,
-				"#version 430\r\n"
-						+ "layout(location = " + getPositionTarget() + ") in vec3 positionTarget;"
-						+ "layout(location = " + getNormalTarget() + ") in vec3 normalTarget;"
-						+ "layout(location = " + getTangentTarget() + ") in vec3 tangentTarget;"
-						+ "layout(location = " + getTangentBase() + ") in vec4 tangentBase;"
-						+ "layout(location = " + getColorTarget() + ") in vec4 colorTarget;"
-						+ "layout(location = " + getTexcoordTarget() + ") in vec2 texcoordTarget;"
-						+ "layout(location = " + getWeight() + ") uniform float weight;"
-						+ "layout(std430, binding = " + getMorphBuffer() + ") restrict buffer morphBuffer {mat4 vertexDatas[];};"
-						+ "void main() {"
-						+ "vertexDatas[gl_VertexID][0].xyz += positionTarget * weight;"
-						+ "vertexDatas[gl_VertexID][1] += vec4(0, normalTarget * weight);" //vertexDatas[gl_VertexID][1].yzw += vec3(normalTarget * weight).xyz; doesn't seem to working.
-						+ "vertexDatas[gl_VertexID][2].xyz += tangentTarget * weight;"
-						+ "vertexDatas[gl_VertexID][2].w = tangentBase.w;"
-						+ "vertexDatas[gl_VertexID][3] += colorTarget * weight;"
-						+ "vec2 texcoord = texcoordTarget * weight;"
-						+ "vertexDatas[gl_VertexID][0].w += texcoord.x;"
-						+ "vertexDatas[gl_VertexID][1].x += texcoord.y;"
-						+ "}");
+		"#version 430\r\n"
+			+ "layout(location = " + getPositionTargetAttribute() + ") in vec3 positionTarget;"
+			+ "layout(location = " + getNormalTargetAttribute() + ") in vec3 normalTarget;"
+			+ "layout(location = " + getTangentTargetAttribute() + ") in vec3 tangentTarget;"
+			+ "layout(location = " + getTangentBaseAttribute() + ") in vec4 tangentBase;"
+			+ "layout(location = " + getColorTargetAttribute() + ") in vec4 colorTarget;"
+			+ "layout(location = " + getTexcoordTargetAttribute() + ") in vec2 texcoordTarget;"
+			+ "layout(location = " + getWeightUniform() + ") uniform float weight;"
+			+ "layout(std430, binding = " + getMorphBufferBinding() + ") restrict buffer morphBuffer {mat4 vertexDatas[];};"
+			+ "void main() {"
+			+ "vertexDatas[gl_VertexID][0].xyz += positionTarget * weight;"
+			+ "vertexDatas[gl_VertexID][1] += vec4(0, normalTarget * weight);" //vertexDatas[gl_VertexID][1].yzw += vec3(normalTarget * weight).xyz; doesn't seem to working.
+			+ "vertexDatas[gl_VertexID][2].xyz += tangentTarget * weight;"
+			+ "vertexDatas[gl_VertexID][2].w = tangentBase.w;"
+			+ "vertexDatas[gl_VertexID][3] += colorTarget * weight;"
+			+ "vec2 texcoord = texcoordTarget * weight;"
+			+ "vertexDatas[gl_VertexID][0].w += texcoord.x;"
+			+ "vertexDatas[gl_VertexID][1].x += texcoord.y;"
+			+ "}");
 		GL20.glCompileShader(glShader);
 
 		int glProgram = GL20.glCreateProgram();
@@ -65,35 +65,35 @@ public class GltfMorphingPassConstants {
 		return glProgram;
 	}
 
-	public int getPositionTarget() {
+	public int getPositionTargetAttribute() {
 		return 0;
 	}
 
-	public int getNormalTarget() {
+	public int getNormalTargetAttribute() {
 		return 1;
 	}
 
-	public int getTangentTarget() {
+	public int getTangentTargetAttribute() {
 		return 2;
 	}
 
-	public int getTangentBase() {
+	public int getTangentBaseAttribute() {
 		return 3;
 	}
 
-	public int getColorTarget() {
+	public int getColorTargetAttribute() {
 		return 4;
 	}
 
-	public int getTexcoordTarget() {
+	public int getTexcoordTargetAttribute() {
 		return 5;
 	}
 
-	public int getWeight() {
+	public int getWeightUniform() {
 		return 6;
 	}
 
-	public int getMorphBuffer() {
+	public int getMorphBufferBinding() {
 		return 0;
 	}
 
@@ -102,24 +102,25 @@ public class GltfMorphingPassConstants {
 	}
 
 	public int getMorphBufferNormalOffset() {
-		return 5;
+		return Float.BYTES * 5;
 	}
 
 	public int getMorphBufferTangentOffset() {
-		return 8;
+		return Float.BYTES * 8;
 	}
 
 	public int getMorphBufferColorOffset() {
-		return 12;
+		return Float.BYTES * 12;
 	}
 
 	public int getMorphBufferTexcoordOffset() {
-		return 3;
+		return Float.BYTES * 3;
 	}
 
 	public int getMorphBufferStride() {
-		return 16;
+		return Float.BYTES * 16;
 	}
+
 	public int getGlZeroVec4Buffer() {
 		return glZeroVec4Buffer;
 	}

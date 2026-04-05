@@ -90,7 +90,6 @@ public class DefaultRenderedSceneModel {
 			}
 		}
 
-		GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, 0);
 		GL30.glBindVertexArray(0);
 	}
 

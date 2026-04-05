@@ -128,55 +128,55 @@ public class GltfMaterialToTextureConstants {
 			return glProgram;
 		}
 
-		public int getWidthLocation() {
+		public int getWidthUniform() {
 			return u_width;
 		}
 
-		public int getHeightLocation() {
+		public int getHeightUniform() {
 			return u_height;
 		}
 
-		public int getHasBaseColorTextureLocation() {
+		public int getHasBaseColorTextureUniform() {
 			return u_hasBaseColorTexture;
 		}
 
-		public int getHasMetallicRoughnessTextureLocation() {
+		public int getHasMetallicRoughnessTextureUniform() {
 			return u_hasMetallicRoughnessTexture;
 		}
 
-		public int getHasNormalTextureLocation() {
+		public int getHasNormalTextureUniform() {
 			return u_hasNormalTexture;
 		}
 
-		public int getHasOcclusionTextureLocation() {
+		public int getHasOcclusionTextureUniform() {
 			return u_hasOcclusionTexture;
 		}
 
-		public int getHasEmissiveTextureLocation() {
+		public int getHasEmissiveTextureUniform() {
 			return u_hasEmissiveTexture;
 		}
 
-		public int getBaseColorFactorLocation() {
+		public int getBaseColorFactorUniform() {
 			return u_baseColorFactor;
 		}
 
-		public int getMetallicFactorLocation() {
+		public int getMetallicFactorUniform() {
 			return u_metallicFactor;
 		}
 
-		public int getRoughnessFactorLocation() {
+		public int getRoughnessFactorUniform() {
 			return u_roughnessFactor;
 		}
 
-		public int getNormalScaleLocation() {
+		public int getNormalScaleUniform() {
 			return u_normalScale;
 		}
 
-		public int getOcclusionStrengthLocation() {
+		public int getOcclusionStrengthUniform() {
 			return u_occlusionStrength;
 		}
 
-		public int getEmissiveFactorLocation() {
+		public int getEmissiveFactorUniform() {
 			return u_emissiveFactor;
 		}
 

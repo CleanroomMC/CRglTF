@@ -1,6 +1,5 @@
 package com.timlee9024.crgltf.gl.rendered.daxshader.impl;
 
-import com.timlee9024.crgltf.gl.rendered.impl.GL21RenderedMeshPrimitiveModel;
 import com.timlee9024.crgltf.gl.rendered.impl.GL21RenderedMeshPrimitiveModelCreator;
 import com.timlee9024.crgltf.property.GltfMaterialExtra;
 import de.javagl.jgltf.model.AccessorModel;
@@ -17,7 +16,7 @@ public class GL21DaxShaderRenderedMeshPrimitiveModelCreator extends GL21Rendered
 	public Map<MaterialModel, GltfMaterialExtra> gltfMaterialExtraLookup;
 
 	@Override
-	public GL21RenderedMeshPrimitiveModel create(MeshPrimitiveModel meshPrimitiveModel) {
+	public GL21DaxShaderRenderedMeshPrimitiveModel create(MeshPrimitiveModel meshPrimitiveModel) {
 		this.meshPrimitiveModel = meshPrimitiveModel;
 		attributes = meshPrimitiveModel.getAttributes();
 		positionsAccessorModel = attributes.get("POSITION");

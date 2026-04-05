@@ -29,7 +29,7 @@ public class DefaultNodeSkinWithInverseBindMatrices extends DefaultNodeSkin {
 			GL15.glBufferSubData(GL43.GL_SHADER_STORAGE_BUFFER, 0, jointMatrixBuffer);
 		}
 
-		GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, GltfCalcJointMatrixPassConstants.getInstance().getJointMatrices(), glJointMatrixBuffer);
+		GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, GltfCalcJointMatrixPassConstants.getInstance().getJointMatrixBufferBinding(), glJointMatrixBuffer);
 		GL30.glBindVertexArray(glInverseBindMatrixVAO);
 		GL11.glDrawArrays(GL11.GL_POINTS, 0, jointNodeAccessors.length);
 	}

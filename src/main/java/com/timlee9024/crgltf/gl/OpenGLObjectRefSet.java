@@ -18,9 +18,7 @@ public class OpenGLObjectRefSet {
 				current[1] = objectRef + 1;
 			} else {
 				int[][] startAndEndsNew = new int[startAndEnds.length + 1][];
-				for (int i = 0; i < startAndEnds.length; i++) {
-					startAndEndsNew[i] = startAndEnds[i];
-				}
+				System.arraycopy(startAndEnds, 0, startAndEndsNew, 0, startAndEnds.length);
 				startAndEndsNew[startAndEnds.length] = current = new int[]{objectRef, objectRef + 1};
 				startAndEnds = startAndEndsNew;
 			}

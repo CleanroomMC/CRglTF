@@ -24,20 +24,19 @@ public class GltfApplySkinMatrixPassConstants {
 	protected int createGlProgram() {
 		int glShader = GL20.glCreateShader(GL20.GL_VERTEX_SHADER);
 		GL20.glShaderSource(glShader,
-				"#version 430\r\n"
-						+ "layout(location = " + getPositionIn() + ") in vec3 position;"
-						+ "layout(location = " + getNormalIn() + ") in vec3 normal;"
-						+ "layout(location = " + getTangentIn() + ") in vec4 tangent;"
-						+ "layout(location = " + getSkinMatrixIn() + ") in mat4 skinMatrix;"
-						+ "layout(std430, binding = " + getAttributes() + ") restrict writeonly buffer attributesBuffer {vec4 attributes[];};"
-						+ "void main() {"
-						+ "int offset = gl_VertexID * 3;"
-						+ "attributes[offset] = skinMatrix * vec4(position, 1.0);"
-						+ "mat3 upperLeft = mat3(skinMatrix);"
-						+ "attributes[offset += 1].xyz = upperLeft * normal;"
-						+ "attributes[offset += 1].xyz = upperLeft * tangent.xyz;"
-						+ "attributes[offset].w = tangent.w;"
-						+ "}");
+		"#version 430\r\n"
+			+ "layout(location = " + getPositionBaseAttribute() + ") in vec3 positionBase;"
+			+ "layout(location = " + getNormalBaseAttribute() + ") in vec3 normalBase;"
+			+ "layout(location = " + getTangentBaseAttribute() + ") in vec4 tangentBase;"
+			+ "layout(std430, binding = " + getSkinBufferBinding() + ") restrict buffer skinBuffer {mat4 skinMatrices[];};"
+			+ "void main() {"
+			+ "mat3 upperLeft = mat3(skinMatrices[gl_VertexID]);"
+			+ "vec4 position = skinMatrices[gl_VertexID] * vec4(positionBase, 1.0);"
+			+ "skinMatrices[gl_VertexID][0] = position;"
+			+ "skinMatrices[gl_VertexID][1].xyz = upperLeft * normalBase;"
+			+ "skinMatrices[gl_VertexID][2].xyz = upperLeft * tangentBase.xyz;"
+			+ "skinMatrices[gl_VertexID][2].w = tangentBase.w;"
+			+ "}");
 		GL20.glCompileShader(glShader);
 
 		int glProgram = GL20.glCreateProgram();
@@ -52,24 +51,36 @@ public class GltfApplySkinMatrixPassConstants {
 		return glProgram;
 	}
 
-	public int getPositionIn() {
+	public int getPositionBaseAttribute() {
 		return 0;
 	}
 
-	public int getNormalIn() {
+	public int getNormalBaseAttribute() {
 		return 1;
 	}
 
-	public int getTangentIn() {
+	public int getTangentBaseAttribute() {
 		return 2;
 	}
 
-	public int getSkinMatrixIn() {
-		return 3;
+	public int getSkinBufferBinding() {
+		return 0;
 	}
 
-	public int getAttributes() {
+	public int getSkinBufferPositionOffset() {
 		return 0;
+	}
+
+	public int getSkinBufferNormalOffset() {
+		return Float.BYTES * 4;
+	}
+
+	public int getSkinBufferTangentOffset() {
+		return Float.BYTES * 8;
+	}
+
+	public int getSkinBufferStride() {
+		return Float.BYTES * 16;
 	}
 
 }

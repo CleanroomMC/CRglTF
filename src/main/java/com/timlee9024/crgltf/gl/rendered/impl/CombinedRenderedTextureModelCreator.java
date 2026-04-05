@@ -63,64 +63,64 @@ public class CombinedRenderedTextureModelCreator extends DefaultRenderedTextureM
 		GL11.glViewport(0, 0, width, height);
 		GL20.glUseProgram(program.getGlProgram());
 
-		hasTextureUniformLocation = program.getHasEmissiveTextureLocation();
+		hasTextureUniformLocation = program.getHasEmissiveTextureUniform();
 		fallbackRenderedTextureModel = DefaultRenderedTextureModel.WHITE_TEXTURE;
 		GL13.glActiveTexture(program.getEmissiveTextureIndex());
 		bindSourceTexture();
 
 		sourceTextureModel = materialModelV2.getOcclusionTexture();
-		hasTextureUniformLocation = program.getHasOcclusionTextureLocation();
+		hasTextureUniformLocation = program.getHasOcclusionTextureUniform();
 		fallbackRenderedTextureModel = DefaultRenderedTextureModel.WHITE_TEXTURE;
 		GL13.glActiveTexture(program.getOcclusionTextureIndex());
 		bindSourceTexture();
 
 		sourceTextureModel = materialModelV2.getNormalTexture();
-		hasTextureUniformLocation = program.getHasNormalTextureLocation();
+		hasTextureUniformLocation = program.getHasNormalTextureUniform();
 		fallbackRenderedTextureModel = DefaultRenderedTextureModel.FLAT_NORMAL_TEXTURE;
 		GL13.glActiveTexture(program.getNormalTextureIndex());
 		bindSourceTexture();
 
 		sourceTextureModel = materialModelV2.getMetallicRoughnessTexture();
-		hasTextureUniformLocation = program.getHasMetallicRoughnessTextureLocation();
+		hasTextureUniformLocation = program.getHasMetallicRoughnessTextureUniform();
 		fallbackRenderedTextureModel = DefaultRenderedTextureModel.WHITE_TEXTURE;
 		GL13.glActiveTexture(program.getMetallicRoughnessTextureIndex());
 		bindSourceTexture();
 
 		sourceTextureModel = materialModelV2.getBaseColorTexture();
-		hasTextureUniformLocation = program.getHasBaseColorTextureLocation();
+		hasTextureUniformLocation = program.getHasBaseColorTextureUniform();
 		fallbackRenderedTextureModel = DefaultRenderedTextureModel.WHITE_TEXTURE;
 		GL13.glActiveTexture(program.getBaseColorTextureIndex());
 		bindSourceTexture();
 
-		if (program.getWidthLocation() != -1) GL20.glUniform1i(program.getWidthLocation(), width);
-		if (program.getHeightLocation() != -1) GL20.glUniform1i(program.getHeightLocation(), height);
+		if (program.getWidthUniform() != -1) GL20.glUniform1i(program.getWidthUniform(), width);
+		if (program.getHeightUniform() != -1) GL20.glUniform1i(program.getHeightUniform(), height);
 
-		if (program.getBaseColorFactorLocation() != -1) {
+		if (program.getBaseColorFactorUniform() != -1) {
 			float[] baseColorFactor = materialModelV2.getBaseColorFactor();
-			if (baseColorFactor != null) GL20.glUniform4fv(program.getBaseColorFactorLocation(), baseColorFactor);
-			else GL20.glUniform4f(program.getBaseColorFactorLocation(), 1, 1, 1, 1);
+			if (baseColorFactor != null) GL20.glUniform4fv(program.getBaseColorFactorUniform(), baseColorFactor);
+			else GL20.glUniform4f(program.getBaseColorFactorUniform(), 1, 1, 1, 1);
 		}
 
-		if (program.getMetallicFactorLocation() != -1) {
-			GL20.glUniform1f(program.getMetallicFactorLocation(), materialModelV2.getMetallicFactor());
+		if (program.getMetallicFactorUniform() != -1) {
+			GL20.glUniform1f(program.getMetallicFactorUniform(), materialModelV2.getMetallicFactor());
 		}
 
-		if (program.getRoughnessFactorLocation() != -1) {
-			GL20.glUniform1f(program.getRoughnessFactorLocation(), materialModelV2.getRoughnessFactor());
+		if (program.getRoughnessFactorUniform() != -1) {
+			GL20.glUniform1f(program.getRoughnessFactorUniform(), materialModelV2.getRoughnessFactor());
 		}
 
-		if (program.getNormalScaleLocation() != -1) {
-			GL20.glUniform1f(program.getNormalScaleLocation(), materialModelV2.getNormalScale());
+		if (program.getNormalScaleUniform() != -1) {
+			GL20.glUniform1f(program.getNormalScaleUniform(), materialModelV2.getNormalScale());
 		}
 
-		if (program.getOcclusionStrengthLocation() != -1) {
-			GL20.glUniform1f(program.getOcclusionStrengthLocation(), materialModelV2.getOcclusionStrength());
+		if (program.getOcclusionStrengthUniform() != -1) {
+			GL20.glUniform1f(program.getOcclusionStrengthUniform(), materialModelV2.getOcclusionStrength());
 		}
 
-		if (program.getEmissiveFactorLocation() != -1) {
+		if (program.getEmissiveFactorUniform() != -1) {
 			float[] emissiveFactor = materialModelV2.getEmissiveFactor();
-			if (emissiveFactor != null) GL20.glUniform3fv(program.getEmissiveFactorLocation(), emissiveFactor);
-			else GL20.glUniform3f(program.getEmissiveFactorLocation(), 0, 0, 0);
+			if (emissiveFactor != null) GL20.glUniform3fv(program.getEmissiveFactorUniform(), emissiveFactor);
+			else GL20.glUniform3f(program.getEmissiveFactorUniform(), 0, 0, 0);
 		}
 
 		GL11.glDrawArrays(GL11.GL_TRIANGLES, 0, 12);

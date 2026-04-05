@@ -21,6 +21,11 @@ public class DefaultRenderedMeshPrimitiveModel {
 
 	};
 
+	static {
+		DUMMY.morphing = Morphing.DUMMY;
+		DUMMY.skinning = Skinning.DUMMY;
+	}
+
 	public DefaultRenderedMaterialModel renderedMaterialModel;
 	public Runnable glDraw;
 	public Morphing morphing;
@@ -46,20 +51,20 @@ public class DefaultRenderedMeshPrimitiveModel {
 		};
 
 		public class AttributeBundle {
-			public int glOriginalAttributesVAO;
 			public int glMorphBuffer;
+			public int glBaseAttributesVAO;
 			public int[] glMorphTargetVAOs;
 
 			public void restoreAttributesForMorphing() {
 				GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, glMorphBuffer);
 				GL43.glClearBufferSubData(GL43.GL_SHADER_STORAGE_BUFFER, GL30.GL_R32F, 0, morphBufferSize, GL11.GL_RED, GL11.GL_FLOAT, (ByteBuffer) null);
-				GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, GltfMorphingPassConstants.getInstance().getMorphBuffer(), glMorphBuffer);
-				GL30.glBindVertexArray(glOriginalAttributesVAO);
+				GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, GltfMorphingPassConstants.getInstance().getMorphBufferBinding(), glMorphBuffer);
+				GL30.glBindVertexArray(glBaseAttributesVAO);
 				GL11.glDrawArrays(GL11.GL_POINTS, 0, count);
 			}
 
 			public void applyMorphTarget(int target) {
-				GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, GltfMorphingPassConstants.getInstance().getMorphBuffer(), glMorphBuffer);
+				GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, GltfMorphingPassConstants.getInstance().getMorphBufferBinding(), glMorphBuffer);
 				GL30.glBindVertexArray(glMorphTargetVAOs[target]);
 				GL11.glDrawArrays(GL11.GL_POINTS, 0, count);
 			}
@@ -92,16 +97,14 @@ public class DefaultRenderedMeshPrimitiveModel {
 		};
 
 		public long skinMatrixSize;
-		public int glSkinMatrixBuffer;
+		public int glSkinBuffer;
+		public int glBaseAttributesVAO;
 		public int[] glSkinMatrixTargetVAOs;
 
-		public int glVertexSrcVAO;
-		public int glAttributesBuffer;
-
 		public void calculateSkinMatrix() {
-			GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, glSkinMatrixBuffer);
+			GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, glSkinBuffer);
 			GL43.glClearBufferSubData(GL43.GL_SHADER_STORAGE_BUFFER, GL30.GL_R32F, 0, skinMatrixSize, GL11.GL_RED, GL11.GL_FLOAT, (ByteBuffer) null);
-			GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, GltfCalcSkinMatrixPassConstants.getInstance().getSkinMatrices(), glSkinMatrixBuffer);
+			GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, GltfCalcSkinMatrixPassConstants.getInstance().getSkinBufferBinding(), glSkinBuffer);
 			for (int vao : glSkinMatrixTargetVAOs) {
 				GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT); //For more than 4 bones
 				GL30.glBindVertexArray(vao);
@@ -110,8 +113,8 @@ public class DefaultRenderedMeshPrimitiveModel {
 		}
 
 		public void applySkinMatrix() {
-			GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, GltfApplySkinMatrixPassConstants.getInstance().getAttributes(), glAttributesBuffer);
-			GL30.glBindVertexArray(glVertexSrcVAO);
+			GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, GltfApplySkinMatrixPassConstants.getInstance().getSkinBufferBinding(), glSkinBuffer);
+			GL30.glBindVertexArray(glBaseAttributesVAO);
 			GL11.glDrawArrays(GL11.GL_POINTS, 0, count);
 		}
 	}

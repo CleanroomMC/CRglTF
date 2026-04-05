@@ -25,7 +25,6 @@ import org.lwjgl.opengl.GL12;
 import org.lwjgl.opengl.GL15;
 import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL30;
-import org.lwjgl.opengl.GL43;
 
 import java.util.Collection;
 
@@ -115,7 +114,7 @@ public class DefaultOptiFineUniversalGltfRenderer extends RenderedUniversalGltfR
 			renderedGltfModelCreator.renderedNodeModelCreator.renderedMeshModelCreator.renderedMeshPrimitiveModelCreator.glBuffers = renderedGltfModelCreator.glBuffers = new OpenGLObjectRefSet();
 			renderedGltfModelCreator.renderedNodeModelCreator.renderedMeshModelCreator.renderedMeshPrimitiveModelCreator.glVertexArrays = renderedGltfModelCreator.glVertexArrays = new OpenGLObjectRefSet();
 			GltfModel gltfModel = listenerGroup.compiledGltfModel.getGltfModel();
-			gltfAnimationPlayers[listenerGroup.modelId] = gltfAnimationPlayerCreator.create(gltfModel, renderedGltfModels[listenerGroup.modelId] = (DefaultDaxShaderRenderedGltfModel) renderedGltfModelCreator.create(gltfModel));
+			gltfAnimationPlayers[listenerGroup.modelId] = gltfAnimationPlayerCreator.create(gltfModel, renderedGltfModels[listenerGroup.modelId] = renderedGltfModelCreator.create(gltfModel));
 			GL30.glBindVertexArray(0);
 		}
 
@@ -124,7 +123,7 @@ public class DefaultOptiFineUniversalGltfRenderer extends RenderedUniversalGltfR
 
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
 		GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, 0);
-		GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, 0);
+
 		GL11.glPopAttrib();
 	}
 

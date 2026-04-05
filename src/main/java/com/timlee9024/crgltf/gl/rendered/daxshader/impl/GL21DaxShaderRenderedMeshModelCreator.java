@@ -1,6 +1,5 @@
 package com.timlee9024.crgltf.gl.rendered.daxshader.impl;
 
-import com.timlee9024.crgltf.gl.rendered.impl.GL21RenderedMeshModel;
 import com.timlee9024.crgltf.gl.rendered.impl.GL21RenderedMeshModelCreator;
 import de.javagl.jgltf.model.MeshModel;
 import de.javagl.jgltf.model.MeshPrimitiveModel;
@@ -10,7 +9,7 @@ import java.util.List;
 public class GL21DaxShaderRenderedMeshModelCreator extends GL21RenderedMeshModelCreator {
 
 	@Override
-	public GL21RenderedMeshModel create(MeshModel meshModel) {
+	public GL21DaxShaderRenderedMeshModel create(MeshModel meshModel) {
 		List<MeshPrimitiveModel> meshPrimitiveModels = meshModel.getMeshPrimitiveModels();
 		GL21DaxShaderRenderedMeshModel renderedMeshModel = new GL21DaxShaderRenderedMeshModel();
 		renderedMeshModel.renderedMeshPrimitiveModels = renderedMeshModel.daxShaderRenderedMeshPrimitiveModels = new GL21DaxShaderRenderedMeshPrimitiveModel[meshPrimitiveModels.size()];

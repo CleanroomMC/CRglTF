@@ -21,7 +21,6 @@ import org.lwjgl.opengl.GL12;
 import org.lwjgl.opengl.GL15;
 import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL30;
-import org.lwjgl.opengl.GL43;
 
 import java.util.Collection;
 
@@ -110,7 +109,7 @@ public class DefaultUniversalGltfRenderer extends RenderedUniversalGltfRenderer<
 
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
 		GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, 0);
-		GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, 0);
+
 		GL11.glPopAttrib();
 	}
 

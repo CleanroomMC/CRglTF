@@ -18,7 +18,6 @@ import org.joml.Vector3f;
 import org.lwjgl.opengl.GL15;
 import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL30;
-import org.lwjgl.opengl.GL43;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -139,13 +138,13 @@ public class DefaultRenderedGltfModelCreator {
 			uploadAndBindArrayBuffer(inverseBindMatrixAccessorModel.getBufferViewModel());
 			for (int i = 0; i < 4; i++) {
 				GL20.glVertexAttribPointer(
-						GltfCalcJointMatrixPassConstants.getInstance().getInverseBindMatrixIn() + i,
+						GltfCalcJointMatrixPassConstants.getInstance().getInverseBindMatrixAttribute() + i,
 						4,
 						inverseBindMatrixAccessorModel.getComponentType(),
 						false,
 						inverseBindMatrixAccessorModel.getByteStride(),
 						inverseBindMatrixAccessorModel.getByteOffset() + 16 * i);
-				GL20.glEnableVertexAttribArray(GltfCalcJointMatrixPassConstants.getInstance().getInverseBindMatrixIn() + i);
+				GL20.glEnableVertexAttribArray(GltfCalcJointMatrixPassConstants.getInstance().getInverseBindMatrixAttribute() + i);
 			}
 			nodeSkin = nodeSkinWithInverseBindMatrices;
 		} else nodeSkin = new DefaultNodeSkin();
@@ -154,8 +153,8 @@ public class DefaultRenderedGltfModelCreator {
 		int jointCount = joints.size();
 		nodeSkin.jointNodeAccessors = new NodeAccessor[jointCount];
 		glBuffers.add(nodeSkin.glJointMatrixBuffer = GL15.glGenBuffers());
-		GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, nodeSkin.glJointMatrixBuffer);
-		GL15.glBufferData(GL43.GL_SHADER_STORAGE_BUFFER, (long) jointCount * ElementType.MAT4.getNumComponents() * Float.BYTES, GL15.GL_STATIC_DRAW);
+		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, nodeSkin.glJointMatrixBuffer);
+		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, (long) jointCount * ElementType.MAT4.getNumComponents() * Float.BYTES, GL15.GL_STATIC_DRAW);
 		for (int i = 0; i < jointCount; i++) {
 			nodeSkin.jointNodeAccessors[i] = nodeAccessorLookup.get(joints.get(i));
 		}

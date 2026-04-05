@@ -2,7 +2,6 @@ package com.timlee9024.crgltf.gl.rendered.daxshader.impl;
 
 import com.timlee9024.crgltf.gl.constants.GltfMaterialToTextureConstants;
 import com.timlee9024.crgltf.gl.rendered.impl.CommonNodeAccessor;
-import com.timlee9024.crgltf.gl.rendered.impl.DefaultRenderedGltfModel;
 import com.timlee9024.crgltf.gl.rendered.impl.DefaultRenderedGltfModelCreator;
 import com.timlee9024.crgltf.gl.rendered.impl.DefaultRenderedMaterialModel;
 import com.timlee9024.crgltf.gl.rendered.impl.DefaultRenderedNodeModel;
@@ -21,7 +20,7 @@ import java.util.Map;
 public class DefaultDaxShaderRenderedGltfModelCreator extends DefaultRenderedGltfModelCreator {
 
 	@Override
-	public DefaultRenderedGltfModel create(GltfModel gltfModel) {
+	public DefaultDaxShaderRenderedGltfModel create(GltfModel gltfModel) {
 		glBufferLookup = new IdentityHashMap<>(gltfModel.getBufferViewModels().size());
 		renderedNodeModelCreator.renderedMeshModelCreator.renderedMeshPrimitiveModelCreator.glBufferLookup = glBufferLookup;
 

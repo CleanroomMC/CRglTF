@@ -22,7 +22,7 @@ public class DefaultRenderedMeshModel {
 			float weight = weights[i];
 			if (weight != 0) {
 				GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
-				GL20.glUniform1f(GltfMorphingPassConstants.getInstance().getWeight(), weight);
+				GL20.glUniform1f(GltfMorphingPassConstants.getInstance().getWeightUniform(), weight);
 				for (DefaultRenderedMeshPrimitiveModel renderedMeshPrimitiveModel : renderedMeshPrimitiveModels) {
 					renderedMeshPrimitiveModel.morphing.applyMorphTarget(i);
 				}

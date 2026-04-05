@@ -71,7 +71,7 @@ public class GL21OptiFineUniversalGltfRenderer extends RenderedUniversalGltfRend
 			renderedMaterialModelCreator.combinedRenderedTextureModelCreator.glTextures = renderedMaterialModelCreator.renderedTextureModelCreator.glTextures = new OpenGLObjectRefSet();
 			renderedGltfModelCreator.renderedNodeModelCreator.renderedMeshModelCreator.renderedMeshPrimitiveModelCreator.glBuffers = new OpenGLObjectRefSet();
 			GltfModel gltfModel = listenerGroup.compiledGltfModel.getGltfModel();
-			gltfAnimationPlayers[listenerGroup.modelId] = gltfAnimationPlayerCreator.create(gltfModel, renderedGltfModels[listenerGroup.modelId] = (GL21DaxShaderRenderedGltfModel) renderedGltfModelCreator.create(gltfModel));
+			gltfAnimationPlayers[listenerGroup.modelId] = gltfAnimationPlayerCreator.create(gltfModel, renderedGltfModels[listenerGroup.modelId] = renderedGltfModelCreator.create(gltfModel));
 		}
 
 		OpenGlHelper.glBindFramebuffer(OpenGlHelper.GL_FRAMEBUFFER, currentFramebuffer);

@@ -9,10 +9,6 @@ public interface NodeAccessor {
 
 	Matrix4f ZERO_MATRIX = new Matrix4f().zero();
 
-	//boolean isTransformMatrixOrTRS();
-
-	//void setTransformMatrixOrTRS(boolean isTransformMatrixOrTRS);
-
 	Matrix4fc getGlobalTransformMatrix();
 
 	boolean isGlobalTransformZeroMatrix();

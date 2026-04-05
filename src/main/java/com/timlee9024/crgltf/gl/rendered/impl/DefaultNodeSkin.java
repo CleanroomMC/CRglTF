@@ -66,7 +66,7 @@ public class DefaultNodeSkin {
 
 	public void runCalcSkinMatrixPass(DefaultRenderedMeshModel[] renderedMeshModels) {
 		if (isAllJointZeroMatrix) return;
-		GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, GltfCalcSkinMatrixPassConstants.getInstance().getJointMatrices(), glJointMatrixBuffer);
+		GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, GltfCalcSkinMatrixPassConstants.getInstance().getJointMatrixBufferBinding(), glJointMatrixBuffer);
 		for (DefaultRenderedMeshModel renderedMeshModel : renderedMeshModels) {
 			for (DefaultRenderedMeshPrimitiveModel renderedMeshPrimitiveModel : renderedMeshModel.renderedMeshPrimitiveModels) {
 				renderedMeshPrimitiveModel.skinning.calculateSkinMatrix();
