@@ -17,6 +17,7 @@ public class OpenGlAvailabilityEntry extends GuiConfigEntries.SelectValueEntry {
 		Map<Object, String> values = new HashMap<>(3);
 		values.put("Auto", "Auto");
 		values.put("Full", "Full");
+		values.put("GL21_EXT", "GL21_EXT");
 		values.put("GL21_FBO", "GL21_FBO");
 		return values;
 	}

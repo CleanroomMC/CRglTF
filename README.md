@@ -25,20 +25,22 @@ The example codes for rendering Block, Item, and Entity
 ## Optimization
 This mod support various optimization through 3 profiles of OpenGL availability. By default, it will automatically select for you.
 
-| Profile        | Vertex Array Object<br/>(VAO) | Hardware Accelerated<br/>Skinning | Hardware Accelerated<br/>Morphing | Status |       System<br/>Requirements       |
-|----------------|:-----------------------------:|:---------------------------------:|:---------------------------------:|--------|:-----------------------------------:|
-| `Full`         |               ✅               |                 ✅                 |                 ✅                 | ✅ Done |             OpenGL 4.3              |
-| `macOS_Legacy` |               ✅               |                 ✅                 |                 ✅                 | 🚧 WIP |     OpenGL 2.1 +<br/>Extensions     |
-| `GL21_FBO`     |               ❌               |                 ❌                 |                 ❌                 | ✅ Done | OpenGL 2.1 +<br/>Framebuffer Object |
+| Profile    | Vertex Array Object<br/>(VAO) | Hardware Accelerated<br/>Skinning | Hardware Accelerated<br/>Morphing | Status     |       System<br/>Requirements       |
+|------------|:-----------------------------:|:---------------------------------:|:---------------------------------:|------------|:-----------------------------------:|
+| `Full`     |               ✅               |                 ✅                 |                 ✅                 | ✅ Done     |             OpenGL 4.3              |
+| `GL21_EXT` |               ✅               |                 ✅                 |                 ✅                 | ✅ Done[^8] |   OpenGL 2.1 +<br/>Extensions[^9]   |
+| `GL21_FBO` |               ❌               |                 ❌                 |                 ❌                 | ✅ Done     | OpenGL 2.1 +<br/>Framebuffer Object |
 
 ## Credit
 - JglTF by javagl : https://github.com/javagl/JglTF
 - Mikk Tangent Generator by jMonkeyEngine : https://github.com/jMonkeyEngine/jmonkeyengine
 
 [^1]: Only available for ShaderMod from OptiFine.
-[^2]: Only `COLOR_0` can be used, it is treated as vertex color of `baseColor`.
+[^2]: Only `COLOR_0` supported, it is treated as vertex color of `baseColor`.
 [^3]: Please see [Supported glTF Material Property](https://github.com/CleanroomMC/CRglTF/blob/master/docs/supported_gltf_material_property.md) for more info.
 [^4]: Support every interpolation method.
 [^5]: Support more than 4 bone per-vertex.
 [^6]: Support every valid attribute, including `COLOR_n` and `TEXCOORD_n`.
 [^7]: Support both non-skinned mesh and skinned mesh.
+[^8]: Support for macOS [OpenGL Legacy profile](https://developer.apple.com/opengl/OpenGL-Capabilities-Tables.pdf) is currently onhold, due to LWJGL3 missing [GL_APPLE_vertex_array_object](https://github.com/LWJGL/lwjgl3/issues/1105).
+[^9]: Require [Transform Feedback](https://wikis.khronos.org/opengl/Transform_Feedback), [Uniform Buffer Object/Bindable Uniform](https://wikis.khronos.org/opengl/Uniform_Buffer_Object), [Vertex Array Object](https://wikis.khronos.org/opengl/Vertex_Specification#Vertex_Array_Object). Either from GL30/GL31 or their extension equivalent.

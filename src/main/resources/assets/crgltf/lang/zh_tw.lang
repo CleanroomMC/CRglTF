@@ -5,4 +5,4 @@ config.crgltf.gltf_material_converter_pack.disabled=*已停用*
 config.crgltf.open_gltf_material_converter_pack_dir=開啟glTF材質轉換包資料夾
 config.crgltf.open_gltf_material_converter_pack_dir.tooltip=請將glTF材質轉換包置於此處
 config.crgltf.opengl_availability=OpenGL功能可用性
-config.crgltf.opengl_availability.tooltip=選擇此模組可使用的OpenGL功能。\nAuto: 透過檢查系統所支援的OpenGL版本來決定\n\nFull: 可使用所有OpenGL功能，系統需至少支援OpenGL 4.3\n\nGL21_FBO: 比照遊戲最低的OpenGL版本需求，僅支援到OpenGL 2.1+FBO\n\n除非遇到相容性問題，將選項調成GL21_FBO會降低效能。
+config.crgltf.opengl_availability.tooltip=選擇此模組可使用的OpenGL功能。\nAuto: 透過檢查系統所支援的OpenGL版本來決定\n\nFull: 可使用所有OpenGL功能，系統需至少支援OpenGL 4.3\n\nGL21_EXT: 系統需至少支援Transform Feedback, Uniform Buffer Object/Bindable Uniform, Vertex Array Object\n\nGL21_FBO: 比照遊戲最低的OpenGL版本需求，僅支援到OpenGL 2.1 + Framebuffer Object\n\n除非遇到相容性問題，將選項調成GL21_EXT或GL21_FBO會降低效能。
