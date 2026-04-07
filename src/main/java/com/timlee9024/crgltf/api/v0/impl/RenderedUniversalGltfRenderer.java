@@ -43,6 +43,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -58,11 +59,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public abstract class RenderedUniversalGltfRenderer<T extends RenderedGltfModel, A extends GltfAnimationPlayer> implements UniversalGltfRenderer, ISelectiveResourceReloadListener {
 
 	protected final Map<ResourceLocation, ListenerGroup> sharedModelListenerGroups = new HashMap<>();
-	protected final Map<String, Callable<ByteBuffer>> sharedURLByteDatas = new HashMap<>();
+	protected final Map<String, Callable<ByteBuffer>> sharedUrlByteDatas = new HashMap<>();
+	protected final Map<String, Supplier<PixelData>> sharedUrlPixelDatas = new HashMap<>();
 	protected final Map<ResourceLocation, Callable<ByteBuffer>> sharedByteDatas = new HashMap<>();
 	protected final Map<ResourceLocation, Supplier<PixelData>> sharedPixelDatas = new HashMap<>();
 
@@ -122,7 +126,8 @@ public abstract class RenderedUniversalGltfRenderer<T extends RenderedGltfModel,
 					ListenerGroup listenerGroup = modelToLoad.getValue();
 					listenerGroup.compiledGltfModel = null;
 				}
-				sharedURLByteDatas.clear();
+				sharedUrlByteDatas.clear();
+				sharedUrlPixelDatas.clear();
 				sharedByteDatas.clear();
 				sharedPixelDatas.clear();
 			}
@@ -196,7 +201,8 @@ public abstract class RenderedUniversalGltfRenderer<T extends RenderedGltfModel,
 					listenerGroup.compiledGltfModel = null;
 				}
 
-				sharedURLByteDatas.clear();
+				sharedUrlByteDatas.clear();
+				sharedUrlPixelDatas.clear();
 				sharedByteDatas.clear();
 				sharedPixelDatas.clear();
 			} else {
@@ -417,7 +423,8 @@ public abstract class RenderedUniversalGltfRenderer<T extends RenderedGltfModel,
 			}
 			listenerGroup.compiledGltfModel = null;
 		}
-		sharedURLByteDatas.clear();
+		sharedUrlByteDatas.clear();
+		sharedUrlPixelDatas.clear();
 		sharedByteDatas.clear();
 		sharedPixelDatas.clear();
 		CRglTFMod.logger.debug("Refresh all models completed.");
@@ -469,7 +476,8 @@ public abstract class RenderedUniversalGltfRenderer<T extends RenderedGltfModel,
 	public void onEvent(FMLLoadCompleteEvent event) {
 		((SimpleReloadableResourceManager) resourceManager).registerReloadListener(this);
 		sharedModelListenerGroups.forEach((key, value) -> value.compiledGltfModel = null);
-		sharedURLByteDatas.clear();
+		sharedUrlByteDatas.clear();
+		sharedUrlPixelDatas.clear();
 		sharedByteDatas.clear();
 		sharedPixelDatas.clear();
 		isFinishModLoading = true;
@@ -489,7 +497,7 @@ public abstract class RenderedUniversalGltfRenderer<T extends RenderedGltfModel,
 
 		public Callable<?> createLoadModelCallable(ResourceLocation resourceLocation) {
 			return () -> {
-				URI baseUri = new URI(resourceLocation.getNamespace() + "/" + resourceLocation.getPath());
+				Path basePath = Path.of(resourceLocation.getNamespace(), resourceLocation.getPath()).getParent();
 				GltfModel gltfModel;
 				try (IResource resource = resourceManager.getResource(resourceLocation)) {
 					try (InputStream inputStream = resource.getInputStream()) {
@@ -503,17 +511,17 @@ public abstract class RenderedUniversalGltfRenderer<T extends RenderedGltfModel,
 								de.javagl.jgltf.impl.v1.GlTF gltfV1 = gltfReader.getAsGltfV1();
 								GltfAssetV1 gltfAsset = new GltfAssetV1(gltfV1, rawGltfData.getBinaryData());
 								for (GltfReference reference : gltfAsset.getBufferReferences())
-									resolveGltfReference(reference, baseUri);
+									resolveGltfReference(reference, basePath);
 								for (GltfReference reference : gltfAsset.getImageReferences())
-									resolveGltfReference(reference, baseUri);
+									resolveGltfReference(reference, basePath);
 								gltfModel = GltfModelCreatorV1.create(gltfAsset);
 							} else if (majorVersion == 2) {
 								de.javagl.jgltf.impl.v2.GlTF gltfV2 = gltfReader.getAsGltfV2();
 								GltfAssetV2 gltfAsset = new GltfAssetV2(gltfV2, rawGltfData.getBinaryData());
 								for (GltfReference reference : gltfAsset.getBufferReferences())
-									resolveGltfReference(reference, baseUri);
+									resolveGltfReference(reference, basePath);
 								for (GltfReference reference : gltfAsset.getImageReferences())
-									resolveGltfReference(reference, baseUri);
+									resolveGltfReference(reference, basePath);
 								gltfModel = GltfModelCreatorV2.create(gltfAsset);
 							} else {
 								throw new IOException("Unsupported major version: " + majorVersion);
@@ -531,25 +539,43 @@ public abstract class RenderedUniversalGltfRenderer<T extends RenderedGltfModel,
 					if (bufferViewModel != null) {
 						pixelDataLookup.put(imageModel, PixelDatas.create(bufferViewModel.getBufferViewData()));
 					} else {
-						String uri = imageModel.getUri();
-						if (IO.isDataUriString(uri)) {
+						String rawUri = imageModel.getUri();
+						if (IO.isDataUriString(rawUri)) {
 							pixelDataLookup.put(imageModel, PixelDatas.create(imageModel.getImageData()));
 						} else {
-							ResourceLocation referenceLocation = uriPathToResourceLocation(baseUri.resolve(new URI(uri.replaceAll(" ", "%20"))).toString());
-							Supplier<PixelData> supplier;
-							synchronized (sharedPixelDatas) {
-								supplier = sharedPixelDatas.computeIfAbsent(referenceLocation, k -> new Supplier<>() {
-									PixelData value;
+							URL url = tryParseURL(rawUri);
+							if (url != null) {
+								Supplier<PixelData> supplier;
+								synchronized (sharedUrlPixelDatas) {
+									supplier = sharedUrlPixelDatas.computeIfAbsent(rawUri, k -> new Supplier<>() {
+										PixelData value;
 
-									@Override
-									public synchronized PixelData get() {
-										if (value == null) value = PixelDatas.create(imageModel.getImageData());
-										return value;
-									}
+										@Override
+										public synchronized PixelData get() {
+											if (value == null) value = PixelDatas.create(imageModel.getImageData());
+											return value;
+										}
 
-								});
+									});
+								}
+								pixelDataLookup.put(imageModel, supplier.get());
+							} else {
+								ResourceLocation referenceLocation = alignedPathToResourceLocation(basePath.resolve(rawUri).normalize());
+								Supplier<PixelData> supplier;
+								synchronized (sharedPixelDatas) {
+									supplier = sharedPixelDatas.computeIfAbsent(referenceLocation, k -> new Supplier<>() {
+										PixelData value;
+
+										@Override
+										public synchronized PixelData get() {
+											if (value == null) value = PixelDatas.create(imageModel.getImageData());
+											return value;
+										}
+
+									});
+								}
+								pixelDataLookup.put(imageModel, supplier.get());
 							}
-							pixelDataLookup.put(imageModel, supplier.get());
 						}
 					}
 				}
@@ -573,14 +599,13 @@ public abstract class RenderedUniversalGltfRenderer<T extends RenderedGltfModel,
 			};
 		}
 
-		protected void resolveGltfReference(GltfReference reference, URI baseUri) throws Exception {
-			String escapedUriString = reference.getUri().replaceAll(" ", "%20");
-			URI uri = new URI(escapedUriString);
-			if (uri.isAbsolute()) {
-				URL url = uri.toURL();
+		protected void resolveGltfReference(GltfReference reference, Path basePath) throws Exception {
+			String rawUri = reference.getUri();
+			URL url = tryParseURL(rawUri);
+			if (url != null) {
 				Callable<ByteBuffer> callable;
-				synchronized (sharedURLByteDatas) {
-					callable = sharedURLByteDatas.computeIfAbsent(url.toString(), l -> new Callable<>() {
+				synchronized (sharedUrlByteDatas) {
+					callable = sharedUrlByteDatas.computeIfAbsent(rawUri, l -> new Callable<>() {
 						ByteBuffer value;
 
 						@Override
@@ -597,7 +622,7 @@ public abstract class RenderedUniversalGltfRenderer<T extends RenderedGltfModel,
 				}
 				reference.getTarget().accept(callable.call());
 			} else {
-				ResourceLocation referenceLocation = uriPathToResourceLocation(baseUri.resolve(uri).toString());
+				ResourceLocation referenceLocation = alignedPathToResourceLocation(basePath.resolve(rawUri).normalize());
 				Callable<ByteBuffer> callable;
 				synchronized (sharedByteDatas) {
 					callable = sharedByteDatas.computeIfAbsent(referenceLocation, l -> new Callable<>() {
@@ -621,12 +646,19 @@ public abstract class RenderedUniversalGltfRenderer<T extends RenderedGltfModel,
 			}
 		}
 
-		protected ResourceLocation uriPathToResourceLocation(String path) {
-			int firstSlash = path.indexOf(47);
-			if (firstSlash > 0)
-				return new ResourceLocation(path.substring(0, firstSlash), path.substring(firstSlash + 1));
-			else if (firstSlash == 0) return new ResourceLocation("minecraft", path.substring(1));
-			else return new ResourceLocation("minecraft", path);
+		protected URL tryParseURL(String rawUri) {
+			try {
+				return (new URI(rawUri)).toURL();
+			} catch (Exception ignored) {
+			}
+			return null;
+		}
+
+		protected ResourceLocation alignedPathToResourceLocation(Path path) {
+			String pathIn = StreamSupport.stream(path.subpath(1, path.getNameCount()).spliterator(), false)
+					.map(Path::toString)
+					.collect(Collectors.joining("/"));
+			return new ResourceLocation(path.getName(0).toString(), pathIn);
 		}
 	}
 }
