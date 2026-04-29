@@ -21,40 +21,16 @@ public class GL21ExtDaxShaderRenderedSceneModel extends GL21ExtRenderedSceneMode
 		if (hasMorphing) {
 			GL11.glEnable(GL30.GL_RASTERIZER_DISCARD);
 
-			GL20.glUseProgram(GL21ExtGltfMorphingPassConstants.getInstance().getGlProgram());
-			for (GL21ExtRenderedNodeModel renderedNodeModel : daxShaderRenderedNodeModels)
-				renderedNodeModel.morphing.runMorphingPass();
-
 			if (nodeSkins != null) {
 				if (hasInverseBindMatrices) {
 					GL20.glUseProgram(GL21ExtGltfCalcJointMatrixPassConstants.getInstance().getGlProgram());
-					for (GL21ExtNodeSkin nodeSkin : nodeSkins)
-						nodeSkin.runCalcJointMatrixPass();
 				}
+				for (GL21ExtNodeSkin nodeSkin : nodeSkins)
+					nodeSkin.runCalcJointMatrixPass();
 
-				GL20.glUseProgram(GL21ExtGltfCalcSkinMatrixPassConstants.getInstance().getGlProgram());
+				GL20.glUseProgram(GL21ExtGltfMorphingPassConstants.getInstance().getGlProgram());
 				for (GL21ExtRenderedNodeModel renderedNodeModel : daxShaderRenderedNodeModels)
-					renderedNodeModel.nodeSkin.runCalcSkinMatrixPass(renderedNodeModel.renderedMeshModels);
-				GL31Abstraction.glBindUniformBuffer(0);
-
-				GL20.glUseProgram(GL21ExtGltfApplySkinMatrixPassConstants.getInstance().getGlProgram());
-				for (GL21ExtRenderedNodeModel renderedNodeModel : daxShaderRenderedNodeModels)
-					renderedNodeModel.nodeSkin.runApplySkinMatrixPass(renderedNodeModel.renderedMeshModels);
-			}
-
-			GL20.glUseProgram(currentGlProgram);
-			GL11.glDisable(GL30.GL_RASTERIZER_DISCARD);
-
-			for (GL21ExtDaxShaderRenderedNodeModel renderedNodeModel : daxShaderRenderedNodeModels) renderedNodeModel.renderMeshModelsForDaxShader();
-		} else {
-			if (nodeSkins != null) {
-				GL11.glEnable(GL30.GL_RASTERIZER_DISCARD);
-
-				if (hasInverseBindMatrices) {
-					GL20.glUseProgram(GL21ExtGltfCalcJointMatrixPassConstants.getInstance().getGlProgram());
-					for (GL21ExtNodeSkin nodeSkin : nodeSkins)
-						nodeSkin.runCalcJointMatrixPass();
-				}
+					renderedNodeModel.morphing.runMorphingPass();
 
 				GL20.glUseProgram(GL21ExtGltfCalcSkinMatrixPassConstants.getInstance().getGlProgram());
 				for (GL21ExtRenderedNodeModel renderedNodeModel : daxShaderRenderedNodeModels)
@@ -70,6 +46,47 @@ public class GL21ExtDaxShaderRenderedSceneModel extends GL21ExtRenderedSceneMode
 
 				for (GL21ExtDaxShaderRenderedNodeModel renderedNodeModel : daxShaderRenderedNodeModels)
 					renderedNodeModel.renderMeshModelsForDaxShader();
+
+				for (GL21ExtNodeSkin nodeSkin : nodeSkins)
+					nodeSkin.isAllJointZeroMatrix = true;
+			} else {
+				GL20.glUseProgram(GL21ExtGltfMorphingPassConstants.getInstance().getGlProgram());
+				for (GL21ExtRenderedNodeModel renderedNodeModel : daxShaderRenderedNodeModels)
+					renderedNodeModel.morphing.runMorphingPass();
+
+				GL20.glUseProgram(currentGlProgram);
+				GL11.glDisable(GL30.GL_RASTERIZER_DISCARD);
+
+				for (GL21ExtDaxShaderRenderedNodeModel renderedNodeModel : daxShaderRenderedNodeModels)
+					renderedNodeModel.renderMeshModelsForDaxShader();
+			}
+		} else {
+			if (nodeSkins != null) {
+				GL11.glEnable(GL30.GL_RASTERIZER_DISCARD);
+
+				if (hasInverseBindMatrices) {
+					GL20.glUseProgram(GL21ExtGltfCalcJointMatrixPassConstants.getInstance().getGlProgram());
+				}
+				for (GL21ExtNodeSkin nodeSkin : nodeSkins)
+					nodeSkin.runCalcJointMatrixPass();
+
+				GL20.glUseProgram(GL21ExtGltfCalcSkinMatrixPassConstants.getInstance().getGlProgram());
+				for (GL21ExtRenderedNodeModel renderedNodeModel : daxShaderRenderedNodeModels)
+					renderedNodeModel.nodeSkin.runCalcSkinMatrixPass(renderedNodeModel.renderedMeshModels);
+				GL31Abstraction.glBindUniformBuffer(0);
+
+				GL20.glUseProgram(GL21ExtGltfApplySkinMatrixPassConstants.getInstance().getGlProgram());
+				for (GL21ExtRenderedNodeModel renderedNodeModel : daxShaderRenderedNodeModels)
+					renderedNodeModel.nodeSkin.runApplySkinMatrixPass(renderedNodeModel.renderedMeshModels);
+
+				GL20.glUseProgram(currentGlProgram);
+				GL11.glDisable(GL30.GL_RASTERIZER_DISCARD);
+
+				for (GL21ExtDaxShaderRenderedNodeModel renderedNodeModel : daxShaderRenderedNodeModels)
+					renderedNodeModel.renderMeshModelsForDaxShader();
+
+				for (GL21ExtNodeSkin nodeSkin : nodeSkins)
+					nodeSkin.isAllJointZeroMatrix = true;
 			} else {
 				for (GL21ExtDaxShaderRenderedNodeModel renderedNodeModel : daxShaderRenderedNodeModels)
 					renderedNodeModel.renderMeshModelsForDaxShader();

@@ -22,7 +22,6 @@ public class DefaultDaxShaderRenderedNodeModel extends DefaultRenderedNodeModel 
 			}
 			GL11.glPopMatrix();
 		} else {
-			nodeSkin.isAllJointZeroMatrixChecked = false;
 			if (nodeSkin.isAllJointZeroMatrix) return;
 			for (DefaultDaxShaderRenderedMeshModel renderedMeshModel : daxShaderRenderedMeshModels) {
 				renderedMeshModel.renderMeshPrimitiveModelsForDaxShader();

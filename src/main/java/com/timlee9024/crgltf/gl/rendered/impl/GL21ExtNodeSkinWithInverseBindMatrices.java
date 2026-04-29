@@ -3,6 +3,7 @@ package com.timlee9024.crgltf.gl.rendered.impl;
 import com.timlee9024.crgltf.gl.GL30Abstraction;
 import com.timlee9024.crgltf.gl.GL31Abstraction;
 import com.timlee9024.crgltf.gl.constants.GL21ExtGltfCalcSkinMatrixPassConstants;
+import com.timlee9024.crgltf.gl.rendered.NodeAccessor;
 import de.javagl.jgltf.model.ElementType;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL20;
@@ -17,29 +18,31 @@ public class GL21ExtNodeSkinWithInverseBindMatrices extends GL21ExtNodeSkin {
 
 	@Override
 	public void runCalcJointMatrixPass() {
-		if (isAllJointZeroMatrixChecked) {
-			if (isAllJointZeroMatrix) return;
-		} else {
-			if (checkAllJointsZeroMatrix()) return;
-		}
-		try (MemoryStack stack = MemoryStack.stackPush()) {
-			FloatBuffer jointMatrixBuffer = stack.mallocFloat(jointNodeAccessors.length * ElementType.MAT4.getNumComponents());
-			for (int i = 0; i < jointNodeAccessors.length; i++) {
-				jointNodeAccessors[i].getGlobalTransformMatrix().get(i * ElementType.MAT4.getNumComponents(), jointMatrixBuffer);
-			}
-			GL31Abstraction.glBindUniformBuffer(glJointMatrixBuffer); //No need to unbind GL_ARRAY_BUFFER by this workaround
-			GL31Abstraction.glUniformBufferSubData(0, jointMatrixBuffer);
-		}
+		for (NodeAccessor nodeAccessor : jointNodeAccessors) {
+			if (!nodeAccessor.isGlobalTransformZeroMatrix()) {
+				isAllJointZeroMatrix = false;
 
-		GL30Abstraction.glBindVertexArray(glJointAndInverseBindMatrixVAO);
-		for (int i = 0; i < glJointMatrixBuffers.length; i++) {
-			GL30Abstraction.glBindBufferBase(GL30.GL_TRANSFORM_FEEDBACK_BUFFER, 0, glJointMatrixBuffers[i]);
-			int startJoint = i * GL21ExtGltfCalcSkinMatrixPassConstants.getInstance().getMaxDrawJointSize();
-			int jointSize = jointNodeAccessors.length - startJoint;
-			if (jointSize > GL21ExtGltfCalcSkinMatrixPassConstants.getInstance().getMaxDrawJointSize()) jointSize = GL21ExtGltfCalcSkinMatrixPassConstants.getInstance().getMaxDrawJointSize();
-			GL30Abstraction.glBeginTransformFeedback(GL11.GL_POINTS);
-			GL11.glDrawArrays(GL11.GL_POINTS, startJoint, jointSize);
-			GL30Abstraction.glEndTransformFeedback();
+				try (MemoryStack stack = MemoryStack.stackPush()) {
+					FloatBuffer jointMatrixBuffer = stack.mallocFloat(jointNodeAccessors.length * ElementType.MAT4.getNumComponents());
+					for (int i = 0; i < jointNodeAccessors.length; i++) {
+						jointNodeAccessors[i].getGlobalTransformMatrix().get(i * ElementType.MAT4.getNumComponents(), jointMatrixBuffer);
+					}
+					GL31Abstraction.glBindUniformBuffer(glJointMatrixBuffer); //No need to unbind GL_ARRAY_BUFFER by this workaround
+					GL31Abstraction.glUniformBufferSubData(0, jointMatrixBuffer);
+				}
+
+				GL30Abstraction.glBindVertexArray(glJointAndInverseBindMatrixVAO);
+				for (int i = 0; i < glJointMatrixBuffers.length; i++) {
+					GL30Abstraction.glBindBufferBase(GL30.GL_TRANSFORM_FEEDBACK_BUFFER, 0, glJointMatrixBuffers[i]);
+					int startJoint = i * GL21ExtGltfCalcSkinMatrixPassConstants.getInstance().getMaxDrawJointSize();
+					int jointSize = jointNodeAccessors.length - startJoint;
+					if (jointSize > GL21ExtGltfCalcSkinMatrixPassConstants.getInstance().getMaxDrawJointSize()) jointSize = GL21ExtGltfCalcSkinMatrixPassConstants.getInstance().getMaxDrawJointSize();
+					GL30Abstraction.glBeginTransformFeedback(GL11.GL_POINTS);
+					GL11.glDrawArrays(GL11.GL_POINTS, startJoint, jointSize);
+					GL30Abstraction.glEndTransformFeedback();
+				}
+				break;
+			}
 		}
 	}
 

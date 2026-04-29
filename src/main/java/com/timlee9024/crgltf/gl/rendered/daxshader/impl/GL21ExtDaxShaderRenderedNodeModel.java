@@ -22,7 +22,6 @@ public class GL21ExtDaxShaderRenderedNodeModel extends GL21ExtRenderedNodeModel 
 			}
 			GL11.glPopMatrix();
 		} else {
-			nodeSkin.isAllJointZeroMatrixChecked = false;
 			if (nodeSkin.isAllJointZeroMatrix) return;
 			for (GL21ExtDaxShaderRenderedMeshModel renderedMeshModel : daxShaderRenderedMeshModels) {
 				renderedMeshModel.renderMeshPrimitiveModelsForDaxShader();

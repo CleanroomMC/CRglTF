@@ -26,40 +26,16 @@ public class GL21ExtRenderedSceneModel {
 		if (hasMorphing) {
 			GL11.glEnable(GL30.GL_RASTERIZER_DISCARD);
 
-			GL20.glUseProgram(GL21ExtGltfMorphingPassConstants.getInstance().getGlProgram());
-			for (GL21ExtRenderedNodeModel renderedNodeModel : renderedNodeModels)
-				renderedNodeModel.morphing.runMorphingPass();
-
 			if (nodeSkins != null) {
 				if (hasInverseBindMatrices) {
 					GL20.glUseProgram(GL21ExtGltfCalcJointMatrixPassConstants.getInstance().getGlProgram());
-					for (GL21ExtNodeSkin nodeSkin : nodeSkins)
-						nodeSkin.runCalcJointMatrixPass();
 				}
+				for (GL21ExtNodeSkin nodeSkin : nodeSkins)
+					nodeSkin.runCalcJointMatrixPass();
 
-				GL20.glUseProgram(GL21ExtGltfCalcSkinMatrixPassConstants.getInstance().getGlProgram());
+				GL20.glUseProgram(GL21ExtGltfMorphingPassConstants.getInstance().getGlProgram());
 				for (GL21ExtRenderedNodeModel renderedNodeModel : renderedNodeModels)
-					renderedNodeModel.nodeSkin.runCalcSkinMatrixPass(renderedNodeModel.renderedMeshModels);
-				GL31Abstraction.glBindUniformBuffer(0);
-
-				GL20.glUseProgram(GL21ExtGltfApplySkinMatrixPassConstants.getInstance().getGlProgram());
-				for (GL21ExtRenderedNodeModel renderedNodeModel : renderedNodeModels)
-					renderedNodeModel.nodeSkin.runApplySkinMatrixPass(renderedNodeModel.renderedMeshModels);
-			}
-
-			GL20.glUseProgram(currentGlProgram);
-			GL11.glDisable(GL30.GL_RASTERIZER_DISCARD);
-
-			for (GL21ExtRenderedNodeModel renderedNodeModel : renderedNodeModels) renderedNodeModel.renderMeshModels();
-		} else {
-			if (nodeSkins != null) {
-				GL11.glEnable(GL30.GL_RASTERIZER_DISCARD);
-
-				if (hasInverseBindMatrices) {
-					GL20.glUseProgram(GL21ExtGltfCalcJointMatrixPassConstants.getInstance().getGlProgram());
-					for (GL21ExtNodeSkin nodeSkin : nodeSkins)
-						nodeSkin.runCalcJointMatrixPass();
-				}
+					renderedNodeModel.morphing.runMorphingPass();
 
 				GL20.glUseProgram(GL21ExtGltfCalcSkinMatrixPassConstants.getInstance().getGlProgram());
 				for (GL21ExtRenderedNodeModel renderedNodeModel : renderedNodeModels)
@@ -75,6 +51,47 @@ public class GL21ExtRenderedSceneModel {
 
 				for (GL21ExtRenderedNodeModel renderedNodeModel : renderedNodeModels)
 					renderedNodeModel.renderMeshModels();
+
+				for (GL21ExtNodeSkin nodeSkin : nodeSkins)
+					nodeSkin.isAllJointZeroMatrix = true;
+			} else {
+				GL20.glUseProgram(GL21ExtGltfMorphingPassConstants.getInstance().getGlProgram());
+				for (GL21ExtRenderedNodeModel renderedNodeModel : renderedNodeModels)
+					renderedNodeModel.morphing.runMorphingPass();
+
+				GL20.glUseProgram(currentGlProgram);
+				GL11.glDisable(GL30.GL_RASTERIZER_DISCARD);
+
+				for (GL21ExtRenderedNodeModel renderedNodeModel : renderedNodeModels)
+					renderedNodeModel.renderMeshModels();
+			}
+		} else {
+			if (nodeSkins != null) {
+				GL11.glEnable(GL30.GL_RASTERIZER_DISCARD);
+
+				if (hasInverseBindMatrices) {
+					GL20.glUseProgram(GL21ExtGltfCalcJointMatrixPassConstants.getInstance().getGlProgram());
+				}
+				for (GL21ExtNodeSkin nodeSkin : nodeSkins)
+					nodeSkin.runCalcJointMatrixPass();
+
+				GL20.glUseProgram(GL21ExtGltfCalcSkinMatrixPassConstants.getInstance().getGlProgram());
+				for (GL21ExtRenderedNodeModel renderedNodeModel : renderedNodeModels)
+					renderedNodeModel.nodeSkin.runCalcSkinMatrixPass(renderedNodeModel.renderedMeshModels);
+				GL31Abstraction.glBindUniformBuffer(0);
+
+				GL20.glUseProgram(GL21ExtGltfApplySkinMatrixPassConstants.getInstance().getGlProgram());
+				for (GL21ExtRenderedNodeModel renderedNodeModel : renderedNodeModels)
+					renderedNodeModel.nodeSkin.runApplySkinMatrixPass(renderedNodeModel.renderedMeshModels);
+
+				GL20.glUseProgram(currentGlProgram);
+				GL11.glDisable(GL30.GL_RASTERIZER_DISCARD);
+
+				for (GL21ExtRenderedNodeModel renderedNodeModel : renderedNodeModels)
+					renderedNodeModel.renderMeshModels();
+
+				for (GL21ExtNodeSkin nodeSkin : nodeSkins)
+					nodeSkin.isAllJointZeroMatrix = true;
 			} else {
 				for (GL21ExtRenderedNodeModel renderedNodeModel : renderedNodeModels)
 					renderedNodeModel.renderMeshModels();

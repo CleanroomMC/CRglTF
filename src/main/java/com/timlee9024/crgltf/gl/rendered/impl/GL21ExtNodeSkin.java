@@ -22,36 +22,23 @@ public class GL21ExtNodeSkin {
 
 	};
 
-	public boolean isAllJointZeroMatrixChecked;
-
-	public boolean isAllJointZeroMatrix;
+	public boolean isAllJointZeroMatrix = true;
 
 	public NodeAccessor[] jointNodeAccessors;
 
 	public int glJointMatrixBuffer;
 
-	public boolean checkAllJointsZeroMatrix() {
+	public void runCalcJointMatrixPass() {
 		for (NodeAccessor nodeAccessor : jointNodeAccessors) {
 			if (!nodeAccessor.isGlobalTransformZeroMatrix()) {
 				isAllJointZeroMatrix = false;
-				isAllJointZeroMatrixChecked = true;
-				return false;
+				break;
 			}
 		}
-		isAllJointZeroMatrix = true;
-		isAllJointZeroMatrixChecked = true;
-		return true;
-	}
-
-	public void runCalcJointMatrixPass() {
 	}
 
 	public void runCalcSkinMatrixPass(GL21ExtRenderedMeshModel[] renderedMeshModels) {
-		if (isAllJointZeroMatrixChecked) {
-			if (isAllJointZeroMatrix) return;
-		} else {
-			if (checkAllJointsZeroMatrix()) return;
-		}
+		if (isAllJointZeroMatrix) return;
 
 		GL31Abstraction.glBindUniformBufferBase(GL21ExtGltfCalcSkinMatrixPassConstants.getInstance().getGlProgram(), GL21ExtGltfCalcSkinMatrixPassConstants.getInstance().getJointMatricesUniformBuffer(), glJointMatrixBuffer);
 

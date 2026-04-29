@@ -27,40 +27,27 @@ public class DefaultNodeSkin {
 
 	};
 
-	public boolean isAllJointZeroMatrixChecked;
-
-	public boolean isAllJointZeroMatrix;
+	public boolean isAllJointZeroMatrix = true;
 
 	public NodeAccessor[] jointNodeAccessors;
 
 	public int glJointMatrixBuffer;
 
-	public boolean checkAllJointsZeroMatrix() {
+	public void runCalcJointMatrixPass() {
 		for (NodeAccessor nodeAccessor : jointNodeAccessors) {
 			if (!nodeAccessor.isGlobalTransformZeroMatrix()) {
 				isAllJointZeroMatrix = false;
-				isAllJointZeroMatrixChecked = true;
-				return false;
-			}
-		}
-		isAllJointZeroMatrix = true;
-		isAllJointZeroMatrixChecked = true;
-		return true;
-	}
 
-	public void runCalcJointMatrixPass() {
-		if (isAllJointZeroMatrixChecked) {
-			if (isAllJointZeroMatrix) return;
-		} else {
-			if (checkAllJointsZeroMatrix()) return;
-		}
-		try (MemoryStack stack = MemoryStack.stackPush()) {
-			FloatBuffer jointMatrixBuffer = stack.mallocFloat(jointNodeAccessors.length * ElementType.MAT4.getNumComponents());
-			for (int i = 0; i < jointNodeAccessors.length; i++) {
-				jointNodeAccessors[i].getGlobalTransformMatrix().get(i * ElementType.MAT4.getNumComponents(), jointMatrixBuffer);
+				try (MemoryStack stack = MemoryStack.stackPush()) {
+					FloatBuffer jointMatrixBuffer = stack.mallocFloat(jointNodeAccessors.length * ElementType.MAT4.getNumComponents());
+					for (int i = 0; i < jointNodeAccessors.length; i++) {
+						jointNodeAccessors[i].getGlobalTransformMatrix().get(i * ElementType.MAT4.getNumComponents(), jointMatrixBuffer);
+					}
+					GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, glJointMatrixBuffer);
+					GL15.glBufferSubData(GL43.GL_SHADER_STORAGE_BUFFER, 0, jointMatrixBuffer);
+				}
+				break;
 			}
-			GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, glJointMatrixBuffer);
-			GL15.glBufferSubData(GL43.GL_SHADER_STORAGE_BUFFER, 0, jointMatrixBuffer);
 		}
 	}
 

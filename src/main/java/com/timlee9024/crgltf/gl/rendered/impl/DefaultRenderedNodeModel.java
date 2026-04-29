@@ -50,7 +50,6 @@ public class DefaultRenderedNodeModel extends CommonNodeAccessor {
 			}
 			GL11.glPopMatrix();
 		} else {
-			nodeSkin.isAllJointZeroMatrixChecked = false;
 			if (nodeSkin.isAllJointZeroMatrix) return;
 			for (DefaultRenderedMeshModel renderedMeshModel : renderedMeshModels) {
 				renderedMeshModel.renderMeshPrimitiveModels();
@@ -78,7 +77,7 @@ public class DefaultRenderedNodeModel extends CommonNodeAccessor {
 					return;
 				}
 			} else {
-				if (nodeSkin.checkAllJointsZeroMatrix()) {
+				if (nodeSkin.isAllJointZeroMatrix) {
 					weights = originalWeights;
 					return;
 				}

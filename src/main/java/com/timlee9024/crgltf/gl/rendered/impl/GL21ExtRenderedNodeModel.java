@@ -48,7 +48,6 @@ public class GL21ExtRenderedNodeModel extends CommonNodeAccessor {
 			}
 			GL11.glPopMatrix();
 		} else {
-			nodeSkin.isAllJointZeroMatrixChecked = false;
 			if (nodeSkin.isAllJointZeroMatrix) return;
 			for (GL21ExtRenderedMeshModel renderedMeshModel : renderedMeshModels) {
 				renderedMeshModel.renderMeshPrimitiveModels();
@@ -76,7 +75,7 @@ public class GL21ExtRenderedNodeModel extends CommonNodeAccessor {
 					return;
 				}
 			} else {
-				if (nodeSkin.checkAllJointsZeroMatrix()) {
+				if (nodeSkin.isAllJointZeroMatrix) {
 					weights = originalWeights;
 					return;
 				}

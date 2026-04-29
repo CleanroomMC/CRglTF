@@ -27,16 +27,16 @@ public class DefaultRenderedSceneModel {
 		if (hasMorphing) {
 			GL11.glEnable(GL30.GL_RASTERIZER_DISCARD);
 
-			GL20.glUseProgram(GltfMorphingPassConstants.getInstance().getGlProgram());
-			for (DefaultRenderedNodeModel renderedNodeModel : renderedNodeModels)
-				renderedNodeModel.morphing.runMorphingPass();
-
 			if (nodeSkins != null) {
 				if (hasInverseBindMatrices) {
 					GL20.glUseProgram(GltfCalcJointMatrixPassConstants.getInstance().getGlProgram());
 				}
 				for (DefaultNodeSkin nodeSkin : nodeSkins)
 					nodeSkin.runCalcJointMatrixPass();
+
+				GL20.glUseProgram(GltfMorphingPassConstants.getInstance().getGlProgram());
+				for (DefaultRenderedNodeModel renderedNodeModel : renderedNodeModels)
+					renderedNodeModel.morphing.runMorphingPass();
 
 				GL20.glUseProgram(GltfCalcSkinMatrixPassConstants.getInstance().getGlProgram());
 				for (DefaultRenderedNodeModel renderedNodeModel : renderedNodeModels)
@@ -46,15 +46,30 @@ public class DefaultRenderedSceneModel {
 				GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
 				for (DefaultRenderedNodeModel renderedNodeModel : renderedNodeModels)
 					renderedNodeModel.nodeSkin.runApplySkinMatrixPass(renderedNodeModel.renderedMeshModels);
+
+				GL20.glUseProgram(currentGlProgram);
+				GL11.glDisable(GL30.GL_RASTERIZER_DISCARD);
+
+				GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
+				for (DefaultRenderedNodeModel renderedNodeModel : renderedNodeModels)
+					renderedNodeModel.renderMeshModels();
+				GL42.glMemoryBarrier(0);
+
+				for (DefaultNodeSkin nodeSkin : nodeSkins)
+					nodeSkin.isAllJointZeroMatrix = true;
+			} else {
+				GL20.glUseProgram(GltfMorphingPassConstants.getInstance().getGlProgram());
+				for (DefaultRenderedNodeModel renderedNodeModel : renderedNodeModels)
+					renderedNodeModel.morphing.runMorphingPass();
+
+				GL20.glUseProgram(currentGlProgram);
+				GL11.glDisable(GL30.GL_RASTERIZER_DISCARD);
+
+				GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
+				for (DefaultRenderedNodeModel renderedNodeModel : renderedNodeModels)
+					renderedNodeModel.renderMeshModels();
+				GL42.glMemoryBarrier(0);
 			}
-
-			GL20.glUseProgram(currentGlProgram);
-			GL11.glDisable(GL30.GL_RASTERIZER_DISCARD);
-
-			GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
-			for (DefaultRenderedNodeModel renderedNodeModel : renderedNodeModels) renderedNodeModel.renderMeshModels();
-			GL42.glMemoryBarrier(0);
-
 			GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, 0);
 		} else {
 			if (nodeSkins != null) {
@@ -82,6 +97,9 @@ public class DefaultRenderedSceneModel {
 				for (DefaultRenderedNodeModel renderedNodeModel : renderedNodeModels)
 					renderedNodeModel.renderMeshModels();
 				GL42.glMemoryBarrier(0);
+
+				for (DefaultNodeSkin nodeSkin : nodeSkins)
+					nodeSkin.isAllJointZeroMatrix = true;
 
 				GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, 0);
 			} else {
